@@ -1,0 +1,5 @@
+[run]
+omit =
+    config/*,
+    *manage.py,
+    *migrations/*,
