@@ -18,6 +18,12 @@ entryPoints:
   flower:
     address: ":5555"
 
+  centrifugo:
+    address: ":8000"
+
+  metabase:
+    address: ":9000"
+
 certificatesResolvers:
   letsencrypt:
     # https://docs.traefik.io/master/https/acme/#lets-encrypt
@@ -67,6 +73,16 @@ http:
       loadBalancer:
         servers:
           - url: http://flower:5555
+
+    centrifugo:
+      loadBalancer:
+        servers:
+          - url: http://centrifugo:8888
+
+    metabase:
+      loadBalancer:
+        servers:
+          - url: http://metabase:3000
 
 providers:
   # https://docs.traefik.io/master/providers/file/

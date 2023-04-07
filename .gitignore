@@ -280,3 +280,6 @@ uia_backend/media/
 .env
 .envs/*
 !.envs/.local/
+
+### other stuff
+*.sqlite3
