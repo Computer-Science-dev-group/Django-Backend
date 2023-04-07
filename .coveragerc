@@ -3,3 +3,5 @@ omit =
     config/*,
     *manage.py,
     *migrations/*,
+    # Ignoring the test_merge_production_dotenvs_in_dotenv since it is not ready
+    tests/test_merge_production_dotenvs_in_dotenv.py,
