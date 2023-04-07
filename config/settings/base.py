@@ -1,9 +1,12 @@
 """
 Base settings to build other settings files upon.
 """
+
 from pathlib import Path
 
 import environ
+import sentry_sdk
+from sentry_sdk.integrations.django import DjangoIntegration
 
 BASE_DIR = Path(__file__).resolve(strict=True).parent.parent.parent
 # uia_backend/
@@ -296,3 +299,13 @@ SPECTACULAR_SETTINGS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+# Sentry setup
+
+sentry_sdk.init(
+    dsn="https://6e4f6540a41b4739a5cb919daf744819@o4504964624875520.ingest.sentry.io/4504970627973120",
+    integrations=[
+        DjangoIntegration(),
+    ],
+    traces_sample_rate=1.0,
+    send_default_pii=True,
+)
