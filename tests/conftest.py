@@ -1,5 +1,6 @@
 from pytest_factoryboy import register
 
-from . import factories
+from users import factory
 
-register(factories.UserFactory)
+register(factory.UserFactory)
+
