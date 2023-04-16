@@ -72,8 +72,8 @@ THIRD_PARTY_APPS = [
 ]
 
 LOCAL_APPS = [
-    "uia_backend.users",
     # Your stuff: custom apps go here
+    "uia_backend.notification",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -201,6 +201,7 @@ EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
     default="django.core.mail.backends.smtp.EmailBackend",
 )
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
 
