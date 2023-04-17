@@ -69,12 +69,13 @@ THIRD_PARTY_APPS = [
     "rest_framework.authtoken",
     "corsheaders",
     "drf_spectacular",
+    "drf_standardized_errors",
 ]
 
 LOCAL_APPS = [
     # Your stuff: custom apps go here
+    "uia_backend.accounts",
     "uia_backend.notification",
-    "uia_backend.users",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -87,7 +88,7 @@ AUTHENTICATION_BACKENDS = [
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 
-AUTH_USER_MODEL = 'users.CustomUser'
+AUTH_USER_MODEL = "accounts.CustomUser"
 
 # PASSWORDS
 # ------------------------------------------------------------------------------
@@ -284,6 +285,7 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
@@ -296,6 +298,11 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Documentation of API endpoints of UIA-Backend",
     "VERSION": "1.0.0",
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+}
+
+DRF_STANDARDIZED_ERRORS = {
+    "ENABLE_IN_DEBUG_FOR_UNHANDLED_EXCEPTIONS": False,
+    "EXCEPTION_FORMATTER_CLASS": "uia_backend.libs.error_formatter.CustomExceptionFormatter",
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
