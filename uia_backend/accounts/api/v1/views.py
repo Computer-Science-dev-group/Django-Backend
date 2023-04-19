@@ -1,8 +1,10 @@
 from typing import Any
 
+
 from django.core.serializers.json import Serializer
 from django.db import transaction
 from rest_framework import generics, permissions, status
+
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -109,4 +111,3 @@ class UserProfileAPIView(generics.GenericAPIView):
             )
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-

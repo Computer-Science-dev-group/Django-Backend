@@ -27,6 +27,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "department",
             "year_of_graduation",
         ]
+        extra_kwargs = {"password": {"write_only": True}}
 
     def validate_password(self, value: str) -> str:
         """Validate password field."""
@@ -92,6 +93,7 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         instance.is_active = False
         instance.user.is_active = True
         instance.save(update_fields=["is_active"])
+        instance.user.save(update_fields=["is_active"])
         instance.save(update_fields=["is_active"])
         return instance
 
@@ -116,7 +118,6 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 extra={"details": verification_id},
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
-
 
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for the Custom User Profile"""
