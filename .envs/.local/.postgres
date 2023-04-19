@@ -1,0 +1,16 @@
+# PostgreSQL
+# ------------------------------------------------------------------------------
+POSTGRES_HOST=postgres
+POSTGRES_PORT=5432
+POSTGRES_DB=uia_backend
+POSTGRES_USER=debug
+POSTGRES_PASSWORD=debug
+
+# Metabase
+# ------------------------------------------------------------------------------
+MB_DB_HOST=postgres
+MB_DB_TYPE=postgres
+MB_DB_DBNAME=uia_backend
+MB_DB_PORT=5432
+MB_DB_USER=debug
+MB_DB_PASS=debug

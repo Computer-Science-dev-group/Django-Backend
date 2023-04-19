@@ -75,9 +75,27 @@ class UserProfileAPIView(generics.GenericAPIView):
             if field in serializer.fields:
                 serializer.fields[field].read_only = False
         return serializer
+   
+
+    @transaction.atomic()
+    def patch(self, request: Request, *args, **kwargs) -> Response:
+        """Subsequent updates to the user profile through the patch method"""
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                data={
+                    "info": "Success",
+                    "message": "Your profile has been successfully updated",
+                }
+            )
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     @transaction.atomic()
-    def put(self, request, *args, **kwargs) -> Response:
+    def put(self, request: Request, *args, **kwargs) -> Response:
         """Initial User Profile update after registration"""
         instance = self.get_object()
         serializer = self.get_serializer(instance, data=request.data)
@@ -93,20 +111,4 @@ class UserProfileAPIView(generics.GenericAPIView):
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @transaction.atomic()
-    def patch(self, request, *args, **kwargs) -> Response:
-        """Subsequent updates to the user profile through the patch method"""
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=True)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                data={
-                    "info": "Success",
-                    "message": "Your profile has been successfully updated",
-                }
-            )
-        else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
