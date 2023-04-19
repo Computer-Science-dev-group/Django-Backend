@@ -17,4 +17,3 @@ class BaseAbstractModel(models.Model):
 
     class Meta:
         abstract = True
-
