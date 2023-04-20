@@ -1,13 +1,19 @@
 from typing import Any
 
 from django.db import transaction
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions,views,status
 from rest_framework.request import Request
 from rest_framework.response import Response
+from django.contrib.auth import authenticate
+from uia_backend.accounts.models import CustomUser
+from rest_framework.views import APIView
+from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
+
 
 from uia_backend.accounts.api.v1.serializers import (
     EmailVerificationSerializer,
     UserRegistrationSerializer,
+    UserLoginSerializer,
 )
 
 
@@ -38,3 +44,31 @@ class EmailVerificationAPIView(generics.GenericAPIView):
                 "message": "Your account has been successfully verified.",
             }
         )
+
+class UserLoginView(APIView):
+    serializer_class= UserLoginSerializer
+    permission_classes = [permissions.AllowAny]
+
+    def post(self, request,*args,**kwargs):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            email=request.data.get('email')
+            password = request.data.get('password')
+            user = authenticate(email=email,password=password)
+            if user is not None:
+                user_profile = CustomUser.objects.filter(id=user.id)
+                if user_profile is None:
+                    return Response({"message":"You do not have an account", "data":{}, "status":False, "status_code":1}, status=status.HTTP_401_UNAUTHORIZED )
+                access_token = AccessToken.for_user(user)
+                refresh_token = RefreshToken.for_user(user)
+                return Response(
+                    {'access_token': str(access_token),
+                    'refresh_token': str(refresh_token),
+                    "message": "Login Successful",
+                    "status":True,
+                    }
+                )
+            else:
+
+                return Response({'message': 'No active account found with the given credentials', "data":{}, "status":False, "status_code":1}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({"message":serializer.errors, "data":{}, "status":False, "status_code":1}, status=status.HTTP_400_BAD_REQUEST)

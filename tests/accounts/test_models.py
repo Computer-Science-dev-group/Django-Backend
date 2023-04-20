@@ -1,5 +1,6 @@
 from django.test import TestCase
 from factory.django import DjangoModelFactory
+import uuid
 
 from uia_backend.accounts.models import (
     CustomUser,
