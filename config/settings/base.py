@@ -77,6 +77,7 @@ LOCAL_APPS = [
     "uia_backend.accounts",
     "uia_backend.notification",
 ]
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
