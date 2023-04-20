@@ -1,9 +1,14 @@
 from django.test import TestCase
 from factory.django import DjangoModelFactory
+
 import uuid
 
 from uia_backend.accounts.models import (
     CustomUser,
+
+from uia_backend.accounts.models import (
+    CustomUser,
+    EmailVerification,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -68,3 +73,8 @@ class UserCoverProfileUploadLocation(TestCase):
             user_cover_profile_upload_location(instance=user, filename=file_name),
             expected_output,
         )
+
+
+class EmailVerificationFactory(DjangoModelFactory):
+    class Meta:
+        model = EmailVerification

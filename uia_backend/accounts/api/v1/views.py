@@ -9,6 +9,9 @@ from uia_backend.accounts.models import CustomUser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import AccessToken, RefreshToken
 
+from rest_framework import generics, permissions
+from rest_framework.request import Request
+from rest_framework.response import Response
 
 from uia_backend.accounts.api.v1.serializers import (
     EmailVerificationSerializer,
@@ -44,7 +47,6 @@ class EmailVerificationAPIView(generics.GenericAPIView):
                 "message": "Your account has been successfully verified.",
             }
         )
-
 class UserLoginView(APIView):
     serializer_class= UserLoginSerializer
     permission_classes = [permissions.AllowAny]
@@ -74,3 +76,4 @@ class UserLoginView(APIView):
             
                 
         return Response({"message":serializer.errors, "data":{}, "status":False, "status_code":1}, status=status.HTTP_400_BAD_REQUEST)
+

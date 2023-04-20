@@ -19,4 +19,5 @@ urlpatterns = [
         UserLoginView.as_view(), 
         name="user_login"    
     ),
+
 ]

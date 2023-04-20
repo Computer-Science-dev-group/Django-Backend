@@ -27,6 +27,9 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "department",
             "year_of_graduation",
         ]
+        
+        extra_kwargs = {"password": {"write_only": True}}
+
 
     def validate_password(self, value: str) -> str:
         """Validate password field."""
@@ -92,7 +95,6 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         instance.is_active = False
         instance.user.is_active = True
         instance.save(update_fields=["is_active"])
-        instance.save(update_fields=["is_active"])
         return instance
 
     def validate(self, attrs: dict[str, Any]) -> EmailVerification:
@@ -122,4 +124,3 @@ class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField(required=True)
     password = serializers.CharField(required=True, style={'input_type':'password'})
 
-    
