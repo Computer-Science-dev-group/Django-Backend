@@ -1,7 +1,6 @@
 from typing import Any
 
 
-from django.core.serializers.json import Serializer
 from django.db import transaction
 from rest_framework import generics, permissions, status
 

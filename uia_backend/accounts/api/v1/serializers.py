@@ -154,3 +154,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+        
