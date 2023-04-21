@@ -10,7 +10,11 @@ from rest_framework import serializers
 
 from uia_backend.accounts import constants
 from uia_backend.accounts.models import CustomUser, EmailVerification
-from uia_backend.accounts.utils import send_user_registration_email_verification_mail
+from uia_backend.accounts.utils import (
+    send_user_password_change_email_notification,
+    send_user_registration_email_verification_mail,
+)
+from uia_backend.libs.default_serializer import StructureSerializer
 
 logger = logging.getLogger()
 
@@ -73,6 +77,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
+    def to_representation(self, instance: Any) -> Any:
+        data = super().to_representation(instance)
+        return StructureSerializer.to_representation(data)
+
 
 class EmailVerificationSerializer(serializers.ModelSerializer):
     signature = serializers.CharField(
@@ -117,3 +125,42 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 extra={"details": verification_id},
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
+
+    def to_representation(self, instance: Any) -> Any:
+        data = "Your account has been successfully verified."
+        return StructureSerializer.to_representation(data=data)
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["password"]
+        extra_kwargs = {"password": {"write_only": True}}
+
+    def validate_password(self, value: str) -> str:
+        """Validate password value."""
+        try:
+            validate_password(password=value)
+        except ValidationError as error:
+            raise serializers.ValidationError(error.error_list)
+
+        return value
+
+    def create(self, validated_data: dict[str, Any]) -> None:
+        """Overidden method."""
+
+    def update(
+        self, instance: CustomUser, validated_data: dict[str, Any]
+    ) -> CustomUser:
+        """Update users password."""
+        instance.set_password(validated_data["password"])
+        instance.save(update_fields=["password"])
+        password_changed(user=instance, password=validated_data["password"])
+        send_user_password_change_email_notification(
+            instance, request=self.context["request"]
+        )
+        return instance
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = "Password Changed Successfully."
+        return StructureSerializer.to_representation(data=data)

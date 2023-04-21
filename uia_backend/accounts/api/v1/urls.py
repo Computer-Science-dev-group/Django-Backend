@@ -1,6 +1,7 @@
 from django.urls import path
 
 from uia_backend.accounts.api.v1.views import (
+    ChangePasswordAPIView,
     EmailVerificationAPIView,
     UserRegistrationAPIView,
 )
@@ -11,5 +12,9 @@ urlpatterns = [
         "email-verification/<str:signature>/",
         EmailVerificationAPIView.as_view(),
         name="email_verification",
+    ),
+    # AUTHENTICATED USER SPECIFIC VIEWS
+    path(
+        "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),
 ]
