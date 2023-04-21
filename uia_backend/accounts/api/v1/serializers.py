@@ -145,7 +145,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         ]
 
 
-    def update(self, instance: CustomUser, validated_data: dict[str, Any]) -> None:
+    def update(self, instance: CustomUser, validated_data: dict[str, Any]) -> CustomUser:
         """
         Update the profile for an existing `CustomUser` instance, given the validated data.
         """

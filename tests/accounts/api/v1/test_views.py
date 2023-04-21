@@ -136,3 +136,81 @@ class EmailVerificationAPIViewTests(APITestCase):
                 "message": "Invalid link or link has expired.",
             },
         )
+
+
+class UserProfileAPIViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("accounts_api_v1:user_profile")
+        self.user = UserModelFactory.create(is_active=True, is_verified=True)
+
+    def test_unauthenticated_user_can_view_profile(self):
+        """Test if an unauthenticated user can view profile."""
+
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_view_profile(self):
+        """Test if an authenticated user can view profile."""
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 200)
+
+    def test_if_authenticated_user_can_update_profile(self):
+        """Test if an authenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertDictEqual(
+            response.data,
+            {
+                "info": "Success",
+                "message": "Your profile has been successfully updated.",
+            },
+        )
+
+    
+    def test_if_unauthenticated_user_can_update_profile(self):
+        """Test if an unauthenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertDictEqual(
+            response.data,
+            {
+                "info": "Failure",
+                "message": "Unable to update your profile due to some errors. Try again!"
+            },
+        )
+

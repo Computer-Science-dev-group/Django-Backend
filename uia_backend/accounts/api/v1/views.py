@@ -1,3 +1,4 @@
+from os import stat
 from typing import Any
 
 
@@ -42,7 +43,7 @@ class EmailVerificationAPIView(generics.GenericAPIView):
             }
         )
 
-class UserProfileAPIView(generics.GenericAPIView):
+class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -61,14 +62,14 @@ class UserProfileAPIView(generics.GenericAPIView):
                 serializer.fields[field].read_only = True
         
         write_only_fields = [
+            "bio", 
+            "gender", 
             "first_name", 
             "last_name", 
             "profile_picture", 
             "cover_photo",
             "phone_number",
             "display_name",
-            "bio", 
-            "gender", 
             "date_of_birth",
         ]
 
@@ -76,7 +77,7 @@ class UserProfileAPIView(generics.GenericAPIView):
             if field in serializer.fields:
                 serializer.fields[field].read_only = False
         return serializer
-    
+   
     @transaction.atomic()
     def put(self, request: Request, *args, **kwargs) -> Response:
         """Initial User Profile update after registration"""
@@ -86,13 +87,20 @@ class UserProfileAPIView(generics.GenericAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(
+                status=status.HTTP_200_OK,
                 data={
                     "info": "Success",
                     "message": "Your profile has been successfully updated",
                 }
             )
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={
+                    "info": "Failure",
+                    "message": "Unable to update your profile due to some errors. Try again!"
+                }
+            )
 
     @transaction.atomic()
     def patch(self, request, *args, **kwargs) -> Response:
@@ -103,10 +111,18 @@ class UserProfileAPIView(generics.GenericAPIView):
         if serializer.is_valid():
             serializer.save()
             return Response(
+                status=status.HTTP_200_OK,
                 data={
                     "info": "Success",
                     "message": "Your profile has been successfully updated",
                 }
             )
         else:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                status=status.HTTP_400_BAD_REQUEST,
+                data={
+                    "info": "Failure",
+                    "message": "Unable to update your profile due to some errors. Try again!"
+                }
+            ) 
+
