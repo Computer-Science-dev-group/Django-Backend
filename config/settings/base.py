@@ -87,7 +87,6 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
 ]
-# https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 
 AUTH_USER_MODEL = "accounts.CustomUser"
 
@@ -287,6 +286,7 @@ REST_FRAMEWORK = {
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
@@ -307,3 +307,4 @@ DRF_STANDARDIZED_ERRORS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+IP_API_CO_URL = "https://ipapi.co"  # https://ipapi.co/api/

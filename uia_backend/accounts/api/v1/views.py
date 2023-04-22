@@ -3,12 +3,15 @@ from typing import Any
 
 
 from django.db import transaction
-from rest_framework import generics, permissions, status
 
+from rest_framework import generics, permissions, status
+from drf_spectacular.utils import OpenApiExample, extend_schema
+from rest_framework import generics, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from uia_backend.accounts.api.v1.serializers import (
+    ChangePasswordSerializer,
     EmailVerificationSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
@@ -20,6 +23,25 @@ class UserRegistrationAPIView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": {
+                        "first_name": "string",
+                        "last_name": "string",
+                        "email": "user@example.com",
+                        "faculty": "string",
+                        "department": "string",
+                        "year_of_graduation": "2001",
+                    },
+                },
+            )
+        ]
+    )
     def post(self, request: Request, *args: Any, **kwargs: dict[str, Any]) -> Response:
         return super().post(request, *args, **kwargs)
 
@@ -32,6 +54,18 @@ class EmailVerificationAPIView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 
     @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": "Your account has been successfully verified.",
+                },
+            )
+        ]
+    )
     def get(self, request: Request, signature: str) -> Response:
         serializer = self.get_serializer(data={"signature": signature})
         serializer.is_valid(raise_exception=True)
@@ -127,3 +161,24 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 }
             )
 
+        return Response(data=serializer.data)
+
+class ChangePasswordAPIView(generics.UpdateAPIView):
+    serializer_class = ChangePasswordSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["put"]
+
+    def get_object(self) -> Any:
+        return self.request.user
+
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={"info": "Success", "message": "Password Changed Successfully."},
+            )
+        ]
+    )
+    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().put(request, *args, **kwargs)
