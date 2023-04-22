@@ -119,33 +119,35 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
 
+
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for the Custom User Profile"""
-
-    year_of_graduation = serializers.CharField(max_length=4, read_only=True)
-    department = serializers.CharField(max_length=65, read_only=True)
-    faculty_or_college = serializers.CharField(max_length=65, read_only=True)
-
 
     class Meta:
         model = CustomUser
         fields = [
-            "first_name", 
-            "last_name", 
-            "profile_picture", 
+            "first_name",
+            "last_name",
+            "profile_picture",
             "cover_photo",
             "phone_number",
             "display_name",
             "year_of_graduation",
             "department",
-            "faculty_or_college",
-            "bio", 
-            "gender", 
+            "faculty",
+            "bio",
+            "gender",
             "date_of_birth",
         ]
+        extra_kwargs = {
+            "year_of_graduation": {"read_only": True},
+            "department": {"read_only": True},
+            "faculty": {"read_only": True},
+        }
 
-
-    def update(self, instance: CustomUser, validated_data: dict[str, Any]) -> CustomUser:
+    def update(
+        self, instance: CustomUser, validated_data: dict[str, Any]
+    ) -> CustomUser:
         """
         Update the profile for an existing `CustomUser` instance, given the validated data.
         """
@@ -154,4 +156,4 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
-        
+

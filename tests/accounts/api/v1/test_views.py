@@ -185,7 +185,6 @@ class UserProfileAPIViewTests(APITestCase):
             },
         )
 
-    
     def test_if_unauthenticated_user_can_update_profile(self):
         """Test if an unauthenticated user can update profile."""
 

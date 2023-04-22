@@ -242,3 +242,4 @@ class UserProfileSerializerTests(CustomSerializerTests):
             "context": None,
         },
     ]
+

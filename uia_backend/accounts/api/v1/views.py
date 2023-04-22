@@ -43,6 +43,7 @@ class EmailVerificationAPIView(generics.GenericAPIView):
             }
         )
 
+
 class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -55,18 +56,18 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
 
         serializer = super().get_serializer(*args, **kwargs)
 
-        read_only_fields = ["year_of_graduation", "department", "faculty_or_college"]
+        read_only_fields = ["year_of_graduation", "department", "faculty"]
 
         for field in read_only_fields:
             if field in serializer.fields:
                 serializer.fields[field].read_only = True
         
         write_only_fields = [
-            "bio", 
-            "gender", 
-            "first_name", 
-            "last_name", 
-            "profile_picture", 
+            "bio",
+            "gender",
+            "first_name",
+            "last_name",
+            "profile_picture",
             "cover_photo",
             "phone_number",
             "display_name",
@@ -98,7 +99,7 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
                 data={
                     "info": "Failure",
-                    "message": "Unable to update your profile due to some errors. Try again!"
+                    "message": "Unable to update your profile due to some errors. Try again!",
                 }
             )
 
@@ -122,7 +123,7 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 status=status.HTTP_400_BAD_REQUEST,
                 data={
                     "info": "Failure",
-                    "message": "Unable to update your profile due to some errors. Try again!"
+                    "message": "Unable to update your profile due to some errors. Try again!",
                 }
-            ) 
+            )
 
