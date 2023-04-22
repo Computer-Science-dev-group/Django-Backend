@@ -34,12 +34,15 @@ class UserRegistrationAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 201)
 
         expected_response_data = {
-            "first_name": "John",
-            "last_name": "Doe",
-            "email": "johndoe@example.com",
-            "faculty": "Engineering",
-            "department": "Computer Science",
-            "year_of_graduation": "2022",
+            "info": "Success",
+            "message": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "johndoe@example.com",
+                "faculty": "Engineering",
+                "department": "Computer Science",
+                "year_of_graduation": "2022",
+            },
         }
 
         self.assertDictEqual(expected_response_data, response.data)
@@ -137,7 +140,6 @@ class EmailVerificationAPIViewTests(APITestCase):
             },
         )
 
-
 class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")
@@ -214,3 +216,8 @@ class UserProfileAPIViewTests(APITestCase):
             },
         )
 
+
+# NOTE: Joseph Complete this test when Abdulahhi's UserLogin PR is merged
+class ChangePasswordAPIViewTests(APITestCase):
+    def setUp(self):
+        self.user = UserModelFactory.create(is_active=False)
