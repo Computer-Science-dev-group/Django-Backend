@@ -6,6 +6,7 @@ from django.utils import timezone
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
 from uia_backend.accounts.api.v1.serializers import (
+    ChangePasswordSerializer,
     EmailVerificationSerializer,
     UserRegistrationSerializer,
 )
@@ -143,3 +144,27 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
                 "lable": "Invalid Email Record",
             },
         ]
+
+
+class ChangePasswordSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = ChangePasswordSerializer
+
+    REQUIRED_FIELDS = ["password"]
+    NON_REQUIRED_FIELDS = []
+
+    VALID_DATA = [
+        {
+            "data": {"password": "f_g68Ata7jPqqmm"},
+            "lable": "Test valid data",
+            "context": None,
+        }
+    ]
+    INVALID_DATA = [
+        {
+            "data": {"password": "string"},
+            "lable": "Test invalid password lenght",
+            "context": None,
+        }
+    ]

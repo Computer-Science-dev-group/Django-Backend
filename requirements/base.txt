@@ -26,3 +26,4 @@ django-cors-headers==3.14.0  # https://github.com/adamchainz/django-cors-headers
 drf-spectacular==0.26.1  # https://github.com/tfranzel/drf-spectacular
 django-anymail[sendinblue]==9.1  # https://github.com/anymail/django-anymail
 drf-standardized-errors[openapi]==0.12.5 # https://github.com/ghazi-git/drf-standardized-errors
+responses==0.23.1 # https://github.com/getsentry/responses
