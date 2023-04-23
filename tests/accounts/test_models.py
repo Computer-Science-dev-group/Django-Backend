@@ -69,6 +69,7 @@ class UserCoverProfileUploadLocation(TestCase):
             expected_output,
         )
 
+
 class EmailVerificationFactory(DjangoModelFactory):
     class Meta:
         model = EmailVerification

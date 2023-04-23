@@ -140,6 +140,7 @@ class EmailVerificationAPIViewTests(APITestCase):
             },
         )
 
+
 class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")
@@ -205,13 +206,13 @@ class UserProfileAPIViewTests(APITestCase):
 
         response = self.client.put(path=self.url, data=user_data)
 
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 401)
 
         self.assertDictEqual(
             response.data,
             {
                 "info": "Failure",
-                "message": "Unable to update your profile due to some errors. Try again!"
+                "message": "Authentication credentials were not provided.",
             },
         )
 

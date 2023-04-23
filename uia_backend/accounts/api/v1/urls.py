@@ -15,8 +15,8 @@ urlpatterns = [
         name="email_verification",
     ),
     # AUTHENTICATED USER SPECIFIC VIEWS
-    path("profile/", UserProfileAPIView.as_view(), name="user_profile"),  
+    path("profile/", UserProfileAPIView.as_view(), name="user_profile"),
     path(
-          "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
-      ),
+        "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
+    ),
 ]

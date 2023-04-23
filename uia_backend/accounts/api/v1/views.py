@@ -1,12 +1,8 @@
-from os import stat
 from typing import Any
 
-
 from django.db import transaction
-
-from rest_framework import generics, permissions, status
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -95,7 +91,7 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
         for field in read_only_fields:
             if field in serializer.fields:
                 serializer.fields[field].read_only = True
-        
+
         write_only_fields = [
             "bio",
             "gender",
@@ -112,7 +108,7 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
             if field in serializer.fields:
                 serializer.fields[field].read_only = False
         return serializer
-   
+
     @transaction.atomic()
     def put(self, request: Request, *args, **kwargs) -> Response:
         """Initial User Profile update after registration"""
@@ -125,8 +121,8 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 status=status.HTTP_200_OK,
                 data={
                     "info": "Success",
-                    "message": "Your profile has been successfully updated",
-                }
+                    "message": "Your profile has been successfully updated.",
+                },
             )
         else:
             return Response(
@@ -134,7 +130,7 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 data={
                     "info": "Failure",
                     "message": "Unable to update your profile due to some errors. Try again!",
-                }
+                },
             )
 
     @transaction.atomic()
@@ -149,8 +145,8 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 status=status.HTTP_200_OK,
                 data={
                     "info": "Success",
-                    "message": "Your profile has been successfully updated",
-                }
+                    "message": "Your profile has been successfully updated.",
+                },
             )
         else:
             return Response(
@@ -158,10 +154,9 @@ class UserProfileAPIView(generics.UpdateAPIView, generics.RetrieveAPIView):
                 data={
                     "info": "Failure",
                     "message": "Unable to update your profile due to some errors. Try again!",
-                }
+                },
             )
 
-        return Response(data=serializer.data)
 
 class ChangePasswordAPIView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer

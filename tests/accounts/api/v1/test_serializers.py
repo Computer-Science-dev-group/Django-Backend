@@ -155,19 +155,19 @@ class UserProfileSerializerTests(CustomSerializerTests):
     REQUIRED_FIELDS = [
         "first_name",
         "last_name",
-        "email",
-        "faculty",
-        "department",
-        "year_of_graduation",
+        "display_name",
     ]
 
     NON_REQUIRED_FIELDS = [
-        "bio",
-        "gender",
         "profile_picture",
         "cover_photo",
         "phone_number",
-        "display_name",
+        "bio",
+        "gender",
+        "date_of_birth",
+        "year_of_graduation",
+        "department",
+        "faculty",
     ]
 
     VALID_DATA = [
@@ -185,9 +185,9 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 "display_name": "John Peters",
                 "phone_number": "08020444345",
             },
+        },
+    ]
 
-
-          
     INVALID_DATA = [
         {
             "data": {
@@ -241,7 +241,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
             "context": None,
         },
     ]
-     
+
 
 class ChangePasswordSerializerTests(CustomSerializerTests):
     __test__ = True
@@ -258,12 +258,11 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
             "context": None,
         }
     ]
-          
+
     INVALID_DATA = [
         {
             "data": {"password": "string"},
             "lable": "Test invalid password lenght",
             "context": None,
         }
-    ]    
-      
+    ]
