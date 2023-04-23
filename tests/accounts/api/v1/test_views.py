@@ -1,9 +1,12 @@
 from unittest import mock
 
+import responses
+from django.conf import settings
 from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework.test import APITestCase
+from rest_framework_simplejwt.tokens import AccessToken
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
 from uia_backend.accounts.models import CustomUser
@@ -141,7 +144,143 @@ class EmailVerificationAPIViewTests(APITestCase):
         )
 
 
-# NOTE: Joseph Complete this test when Abdulahhi's UserLogin PR is merged
 class ChangePasswordAPIViewTests(APITestCase):
     def setUp(self):
-        self.user = UserModelFactory.create(is_active=False)
+        self.user = UserModelFactory.create(is_active=True)
+        self.url = reverse("accounts_api_v1:change_password")
+        self.auth_headers = f"Bearer {AccessToken.for_user(self.user)}"
+
+    @mock.patch("uia_backend.notification.tasks.send_template_email_task.delay")
+    @responses.activate
+    def test_change_password_authenticated_user_successful(self, mock_send_email_task):
+        """Test change password successful for authenticated user."""
+
+        responses.add(
+            responses.GET,
+            f"{settings.IP_API_CO_URL}/127.0.0.1/region/",
+            body="Region",
+            status=200,
+        )
+
+        valid_data = {"password": "f_g68Ata7jPqqmm"}
+
+        self.client.credentials(
+            HTTP_AUTHORIZATION=self.auth_headers,
+            HTTP_USER_AGENT="Mozilla/5.0",
+            REMOTE_ADDR="127.0.0.1",
+        )
+        response = self.client.put(
+            data=valid_data,
+            path=self.url,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.data,
+            {"info": "Success", "message": "Password Changed Successfully."},
+        )
+        mock_send_email_task.assert_called_once()
+
+    def test_change_password_unauthenticated_user(self):
+        """Test change password failed for unauthenticated user."""
+
+        valid_data = {"password": "f_g68Ata7jPqqmm"}
+
+        response = self.client.put(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertDictEqual(
+            response.data,
+            {
+                "info": "Failure",
+                "message": "Authentication credentials were not provided.",
+            },
+        )
+
+    def test_change_password_invalid_password(self):
+        """Test change password failed for invalid password."""
+
+        valid_data = {"password": "string"}
+
+        self.client.credentials(HTTP_AUTHORIZATION=self.auth_headers)
+
+        response = self.client.put(
+            data=valid_data,
+            path=self.url,
+        )
+
+        self.assertEqual(response.status_code, 400)
+
+
+class LoginAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(is_active=True, email="user@example.com")
+        self.user.set_password("string")
+        self.user.save()
+        self.url = reverse("accounts_api_v1:user_signin")
+
+    def test_successful_login(self):
+        """Test user logs in successfully."""
+
+        valid_data = {"email": "user@example.com", "password": "string"}
+
+        with mock.patch(
+            "rest_framework_simplejwt.tokens.AccessToken.for_user",
+            side_effect=["jwt-token-asasasas"],
+        ) as jwt_token_mock:
+            response = self.client.post(data=valid_data, path=self.url)
+
+        jwt_token_mock.assert_called_once()
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(
+            response.data,
+            {"info": "Success", "message": {"auth_token": "jwt-token-asasasas"}},
+        )
+
+    def test_invalid_credentials_email(self):
+        """Test login with invalid email fails."""
+        valid_data = {"email": "invalid@example.com", "password": "string"}
+
+        response = self.client.post(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            response.data,
+            {
+                "info": "Success",
+                "message": "Invalid credentials or your account is inactive.",
+            },
+        )
+
+    def test_invalid_credentials_password(self):
+        """Test login with invalid password fails."""
+        valid_data = {"email": "user@example.com", "password": "wrong"}
+
+        response = self.client.post(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            response.data,
+            {
+                "info": "Success",
+                "message": "Invalid credentials or your account is inactive.",
+            },
+        )
+
+    def test_inactive_user(self):
+        """Test login failes when user is inactive."""
+        self.user.is_active = False
+        self.user.save()
+
+        valid_data = {"email": "user@example.com", "password": "string"}
+
+        response = self.client.post(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertTrue(
+            response.data,
+            {
+                "info": "Success",
+                "message": "Invalid credentials or your account is inactive.",
+            },
+        )
