@@ -2,13 +2,14 @@ from typing import Any
 
 from django.db import transaction
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from rest_framework import generics, permissions
+from rest_framework import generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
+    LoginSerializer,
     UserRegistrationSerializer,
 )
 
@@ -87,3 +88,28 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
     )
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().put(request, *args, **kwargs)
+
+
+class LoginAPIView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": {"auth_token": "jwt-token-asasasas"},
+                },
+            )
+        ]
+    )
+    def post(self, request: Request) -> Response:
+        """User login view."""
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # NOTE: we can send a task here to store login attempt
+        return Response(data=serializer.data, status=status.HTTP_200_OK)

@@ -7,6 +7,7 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import AccessToken
 
 from uia_backend.accounts import constants
 from uia_backend.accounts.models import CustomUser, EmailVerification
@@ -163,4 +164,27 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: CustomUser) -> dict[str, Any]:
         data = "Password Changed Successfully."
+        return StructureSerializer.to_representation(data=data)
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=250, required=True, write_only=True)
+    password = serializers.CharField(max_length=250, required=True, write_only=True)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Validate serializer data."""
+        data = super().validate(attrs)
+
+        # check that active user with this email exits
+        user = CustomUser.objects.filter(email=data["email"], is_active=True).first()
+
+        if user and user.check_password(raw_password=data["password"]):
+            data["user"] = user
+            return data
+        raise serializers.ValidationError(
+            "Invalid credentials or your accoun is inactive."
+        )
+
+    def to_representation(self, instance: dict[str, Any]) -> dict[str, Any]:
+        data = {"auth_token": str(AccessToken.for_user(user=instance["user"]))}
         return StructureSerializer.to_representation(data=data)
