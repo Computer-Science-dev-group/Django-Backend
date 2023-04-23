@@ -11,6 +11,14 @@ urlpatterns = [
             namespace="accounts_api_v1",
         ),
     ),
+
+    path(
+    "api/v1/friendship/", 
+    include(
+        ("uia_backend.friendship.api.v1.urls", "friendship_api_v1"),
+        namespace="friendship_api_v1"
+        ),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS
