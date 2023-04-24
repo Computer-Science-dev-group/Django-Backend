@@ -10,6 +10,7 @@ from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     UserProfileSerializer,
+    LoginSerializer,
     UserRegistrationSerializer,
 )
 
@@ -109,3 +110,28 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
     )
     def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().put(request, *args, **kwargs)
+
+
+class LoginAPIView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": {"auth_token": "jwt-token-asasasas"},
+                },
+            )
+        ]
+    )
+    def post(self, request: Request) -> Response:
+        """User login view."""
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # NOTE: we can send a task here to store login attempt
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
