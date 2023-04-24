@@ -150,7 +150,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "gender",
             "date_of_birth",
         ]
-        read_only_fields = ['year_of_graduation', 'department', 'faculty']
+        read_only_fields = ["year_of_graduation", "department", "faculty"]
 
     def update(
         self, instance: CustomUser, validated_data: dict[str, Any]
