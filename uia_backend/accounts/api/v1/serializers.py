@@ -12,8 +12,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
 
 from uia_backend.accounts import constants
-
-from uia_backend.accounts.models import CustomUser, EmailVerification,OTP
+from uia_backend.accounts.models import OTP, CustomUser, EmailVerification
 from uia_backend.accounts.utils import (
     send_user_forget_password_mail,
     send_user_password_change_email_notification,
@@ -133,7 +132,7 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 extra={"details": verification_id},
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
-    
+
     def to_representation(self, instance: Any) -> Any:
         data = "Your account has been successfully verified."
         return StructureSerializer.to_representation(data=data)

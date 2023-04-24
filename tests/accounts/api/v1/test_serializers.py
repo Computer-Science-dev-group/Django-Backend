@@ -274,6 +274,7 @@ class VerifyOTPSerializerTestCase(APITestCase):
         self.assertFalse(OTP.objects.get(otp=self.otp).is_valid)
         # self.assertIsNotNone(Token.objects.get(user=self.user))
 
+
 class ChangePasswordSerializerTests(CustomSerializerTests):
     __test__ = True
 
