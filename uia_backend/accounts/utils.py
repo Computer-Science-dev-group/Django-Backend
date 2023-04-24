@@ -64,6 +64,10 @@ def send_user_forget_password_mail(user, request: Request, otp) -> None:
             user.email: {
                 "otp": otp,
                 "expiration_duration_in_minutes": constants.OTP_ACTIVE_PERIOD,
+            }
+        },
+    )
+
 
 def get_location_from_ip(ip: str) -> str | None:
     """Get ip region from ipapi.co."""

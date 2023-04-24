@@ -6,9 +6,8 @@ from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APITestCase, APIClient, APITestCase
+from rest_framework.test import APIClient, APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
-
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
 from uia_backend.accounts import constants
@@ -270,6 +269,7 @@ class VerifyOTPViewTestCase(APITestCase):
         response = self.client.post(self.url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
 
 class ChangePasswordAPIViewTests(APITestCase):
     def setUp(self):

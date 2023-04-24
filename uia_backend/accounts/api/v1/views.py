@@ -1,7 +1,6 @@
 from typing import Any
 
 from django.db import transaction
-
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.request import Request
@@ -11,7 +10,6 @@ from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     ForgetPasswordSerializer,
-
     LoginSerializer,
     UserRegistrationSerializer,
     VerifyOTPSerializer,
