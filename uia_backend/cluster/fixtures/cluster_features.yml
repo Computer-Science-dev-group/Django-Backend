@@ -1,0 +1,10 @@
+
+# global defualt clutser
+- model: cluster.cluster
+  pk: 327d6c29-654d-4c70-b599-1334f0ae7975 # this uuid should not be changed
+  fields:
+    title: "Global"
+    description: "This cluster is the global cluster that contains all users in tha app."
+    icon: null
+    type: 0
+    created_by: null

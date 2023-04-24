@@ -1,6 +1,10 @@
 import uuid
 
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
+from django.contrib.auth.models import (
+    AbstractBaseUser,
+    BaseUserManager,
+    PermissionsMixin,
+)
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -30,7 +34,7 @@ class CustomUserManager(BaseUserManager):
         return user
 
 
-class CustomUser(BaseAbstractModel, AbstractBaseUser):
+class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     """Custom User model for UIA"""
 
     first_name = models.CharField(max_length=150)

@@ -1,7 +1,10 @@
+import tempfile
 from dataclasses import dataclass
-from typing import Any
+from typing import IO, Any
 
+from django.core.files.images import ImageFile
 from django.test import TestCase
+from PIL import Image
 from rest_framework.serializers import Serializer
 
 
@@ -78,7 +81,11 @@ class CustomSerializerTests(TestCase):
             serializer = self.serializer_class(
                 data=valid_data["data"], context=valid_data.get("context")
             )
-            self.assertEqual(serializer.is_valid(), True, msg=valid_data.get("lable"))
+            self.assertEqual(
+                serializer.is_valid(),
+                True,
+                msg=f'{valid_data.get("lable")} \n\n{serializer.errors}',
+            )
 
     def test_invalid_data(
         self,
@@ -97,3 +104,13 @@ class CustomSerializerTests(TestCase):
                 False,
                 msg=invalid_data["lable"],
             )
+
+
+def get_test_image_file(
+    format: str = "PNG", extension: str = ".png", name: str = "image.png"
+) -> IO[bytes]:
+    image = Image.new("RGB", (10, 10))
+    image_file = tempfile.NamedTemporaryFile(suffix=extension)
+    image.save(image_file, format=format)
+    image_file.seek(0)
+    return ImageFile(image_file, name=name)
