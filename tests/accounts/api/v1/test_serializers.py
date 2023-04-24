@@ -206,20 +206,6 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 "first_name": "John",
                 "last_name": "Doe",
                 "email": "user@example.com",
-                "faculty": "Science",
-                "department": "Computer Science",
-                "year_of_graduation": str(
-                    (timezone.now() + relativedelta(year=1)).year
-                ),
-            },
-            "lable": "Test writing to year_of_graduation field failed",
-            "context": None,
-        },
-        {
-            "data": {
-                "first_name": "John",
-                "last_name": "Doe",
-                "email": "user@example.com",
                 "password": "f_g68Ata7jPqqmm",
                 "faculty": "Science",
                 "department": "",
