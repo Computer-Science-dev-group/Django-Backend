@@ -101,7 +101,6 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         """Update EmailVerification record."""
         instance.is_active = False
         instance.user.is_active = True
-        instance.save(update_fields=["is_active"])
         instance.user.save(update_fields=["is_active"])
         return instance
 
@@ -151,11 +150,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "gender",
             "date_of_birth",
         ]
-        extra_kwargs = {
-            "year_of_graduation": {"read_only": True},
-            "department": {"read_only": True},
-            "faculty": {"read_only": True},
-        }
+        read_only_fields = ['year_of_graduation', 'department', 'faculty']
 
     def update(
         self, instance: CustomUser, validated_data: dict[str, Any]

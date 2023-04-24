@@ -81,14 +81,7 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
     @transaction.atomic()
     def put(self, request, *args, **kwargs) -> Response:
         """Subsequent updates to the user profile"""
-        super().put(request, *args, **kwargs)
-        return Response(
-            status=status.HTTP_200_OK,
-            data={
-                "info": "Success",
-                "message": "Your profile has been successfully updated.",
-            },
-        )
+        return super().put(request, *args, **kwargs)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):

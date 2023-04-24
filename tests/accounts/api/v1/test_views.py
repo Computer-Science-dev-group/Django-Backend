@@ -161,6 +161,23 @@ class UserProfileAPIViewTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.url, args=[self.user.id])
         self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            dict(response.data["message"]),
+            {
+                "first_name": self.user.first_name,
+                "last_name": self.user.last_name,
+                "profile_picture": None,
+                "cover_photo": None,
+                "faculty": self.user.faculty,
+                "department": self.user.department,
+                "year_of_graduation": self.user.year_of_graduation,
+                "bio": self.user.bio,
+                "gender": self.user.gender,
+                "display_name": self.user.display_name,
+                "phone_number": self.user.phone_number,
+                "date_of_birth": None,
+            },
+        )
 
     def test_if_authenticated_user_can_update_profile(self):
         """Test if an authenticated user can update profile."""
@@ -172,6 +189,7 @@ class UserProfileAPIViewTests(APITestCase):
             "password": self.user.password,
             "faculty": self.user.faculty,
             "department": self.user.department,
+            "year_of_graduation": self.user.year_of_graduation,
             "bio": "Hi, I am a graduate of Computer Science, UI",
             "gender": "Male",
             "display_name": "John Peters",
@@ -184,10 +202,20 @@ class UserProfileAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(
-            response.data,
+            dict(response.data["message"]),
             {
-                "info": "Success",
-                "message": "Your profile has been successfully updated.",
+                "first_name": user_data["first_name"],
+                "last_name": user_data["last_name"],
+                "faculty": user_data["faculty"],
+                "department": user_data["department"],
+                "bio": user_data["bio"],
+                "gender": user_data["gender"],
+                "display_name": user_data["display_name"],
+                "phone_number": user_data["phone_number"],
+                "date_of_birth": None,
+                "cover_photo": None,
+                "profile_picture": None,
+                "year_of_graduation": user_data["year_of_graduation"]
             },
         )
 
@@ -220,7 +248,6 @@ class UserProfileAPIViewTests(APITestCase):
         )
 
 
-# NOTE: Joseph Complete this test when Abdulahhi's UserLogin PR is merged
 class ChangePasswordAPIViewTests(APITestCase):
     def setUp(self):
         self.user = UserModelFactory.create(is_active=True)
