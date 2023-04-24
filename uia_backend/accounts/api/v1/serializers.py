@@ -9,13 +9,17 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import AccessToken
 
 from uia_backend.accounts import constants
-from uia_backend.accounts.models import OTP, CustomUser, EmailVerification
+
+from uia_backend.accounts.models import CustomUser, EmailVerification,OTP
 from uia_backend.accounts.utils import (
     send_user_forget_password_mail,
+    send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
 )
+from uia_backend.libs.default_serializer import StructureSerializer
 
 logger = logging.getLogger()
 
@@ -81,6 +85,10 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
+    def to_representation(self, instance: Any) -> Any:
+        data = super().to_representation(instance)
+        return StructureSerializer.to_representation(data)
+
 
 class EmailVerificationSerializer(serializers.ModelSerializer):
     signature = serializers.CharField(
@@ -125,6 +133,10 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 extra={"details": verification_id},
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
+    
+    def to_representation(self, instance: Any) -> Any:
+        data = "Your account has been successfully verified."
+        return StructureSerializer.to_representation(data=data)
 
 
 class ForgetPasswordSerializer(serializers.Serializer):
@@ -196,3 +208,61 @@ class VerifyOTPSerializer(serializers.Serializer):
 
         #     # Creates a new token
         # Token.objects.create(user=user)
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["password"]
+        extra_kwargs = {"password": {"write_only": True}}
+
+    def validate_password(self, value: str) -> str:
+        """Validate password value."""
+        try:
+            validate_password(password=value)
+        except ValidationError as error:
+            raise serializers.ValidationError(error.error_list)
+
+        return value
+
+    def create(self, validated_data: dict[str, Any]) -> None:
+        """Overidden method."""
+
+    def update(
+        self, instance: CustomUser, validated_data: dict[str, Any]
+    ) -> CustomUser:
+        """Update users password."""
+        instance.set_password(validated_data["password"])
+        instance.save(update_fields=["password"])
+        password_changed(user=instance, password=validated_data["password"])
+        send_user_password_change_email_notification(
+            instance, request=self.context["request"]
+        )
+        return instance
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = "Password Changed Successfully."
+        return StructureSerializer.to_representation(data=data)
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=250, required=True, write_only=True)
+    password = serializers.CharField(max_length=250, required=True, write_only=True)
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Validate serializer data."""
+        data = super().validate(attrs)
+
+        # check that active user with this email exits
+        user = CustomUser.objects.filter(email=data["email"], is_active=True).first()
+
+        if user and user.check_password(raw_password=data["password"]):
+            data["user"] = user
+            return data
+        raise serializers.ValidationError(
+            "Invalid credentials or your accoun is inactive."
+        )
+
+    def to_representation(self, instance: dict[str, Any]) -> dict[str, Any]:
+        data = {"auth_token": str(AccessToken.for_user(user=instance["user"]))}
+        return StructureSerializer.to_representation(data=data)
