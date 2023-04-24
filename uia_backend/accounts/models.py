@@ -78,3 +78,15 @@ class EmailVerification(BaseAbstractModel):
     internal_tracker_id = models.UUIDField(default=uuid.uuid4)
     is_active = models.BooleanField(default=True)
     expiration_date = models.DateTimeField()
+
+
+# OTP Verification
+class OTP(BaseAbstractModel):
+    """
+    Model that generates the OTP
+    """
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    otp = models.CharField(max_length=10)
+    is_valid = models.BooleanField(default=False)
+    expiry_time = models.DateTimeField()

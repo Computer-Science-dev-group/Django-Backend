@@ -77,6 +77,7 @@ LOCAL_APPS = [
     "uia_backend.accounts",
     "uia_backend.notification",
 ]
+
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
@@ -247,6 +248,8 @@ if USE_TZ:
     CELERY_TIMEZONE = TIME_ZONE
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-broker_url
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="")
+# CELERY_BROKER_URL = 'redis://127.0.0.1:6379/0'
+
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#std:setting-result_backend
 CELERY_RESULT_BACKEND = CELERY_BROKER_URL
 # https://docs.celeryq.dev/en/stable/userguide/configuration.html#result-extended
@@ -305,3 +308,5 @@ DRF_STANDARDIZED_ERRORS = {
 }
 # Your stuff...
 # ------------------------------------------------------------------------------
+
+# AUTH_USER_MODEL = "accounts.CustomUser"

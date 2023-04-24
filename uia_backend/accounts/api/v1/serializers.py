@@ -2,17 +2,25 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
+from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.utils import timezone
+from django.utils.crypto import get_random_string
 from rest_framework import serializers
 
 from uia_backend.accounts import constants
-from uia_backend.accounts.models import CustomUser, EmailVerification
-from uia_backend.accounts.utils import send_user_registration_email_verification_mail
+from uia_backend.accounts.models import OTP, CustomUser, EmailVerification
+from uia_backend.accounts.utils import (
+    send_user_forget_password_mail,
+    send_user_registration_email_verification_mail,
+)
 
 logger = logging.getLogger()
+
+
+User = get_user_model()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -117,3 +125,74 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 extra={"details": verification_id},
             )
             raise serializers.ValidationError("Invalid link or link has expired.")
+
+
+class ForgetPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+    def validate_email(self, email):
+        user = CustomUser.objects.filter(email=email).first()
+        if not user:
+            raise serializers.ValidationError("No user with this email address exists.")
+        return email
+
+    def save(self):
+        email = self.validated_data["email"]
+        user = CustomUser.objects.get(email=email)
+        otp = get_random_string(
+            length=constants.OTP_CHARACTER_LENGTH, allowed_chars="0123456789"
+        )
+        otp_expiry_time = timezone.now() + timezone.timedelta(minutes=30)
+        OTP.objects.create(user=user, otp=otp, expiry_time=otp_expiry_time)
+        send_user_forget_password_mail(user, request=self.context["request"], otp=otp)
+
+
+class VerifyOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(max_length=6)
+    new_password = serializers.CharField(max_length=40)
+
+    def validate_email(self, email):
+        user = CustomUser.objects.filter(email=email).first()
+        if not user:
+            raise serializers.ValidationError("No user with this email address exists.")
+        return email
+
+    def validate(self, data):
+        email = data["email"]
+        otp = data["otp"]
+        user = CustomUser.objects.get(email=email)
+
+        # Get the most recent OTP for this user
+        otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
+        if otp_obj.otp != otp:
+            raise serializers.ValidationError("Invalid OTP.")
+        if len(otp) > constants.OTP_CHARACTER_LENGTH:
+            raise serializers.ValidationError("Invalid OTP.")
+        # Checks if it has expired #NOTE: We could use a cron job for this task that sets the OTP to be invalid
+        if timezone.now() > otp_obj.expiry_time:
+            raise serializers.ValidationError("OTP has expired.")
+        return data
+
+    def save(self):
+        email = self.validated_data["email"]
+        user = CustomUser.objects.get(email=email)
+        otp = self.validated_data["otp"]
+        new_password = self.validated_data["new_password"]
+        user.set_password(new_password)
+        user.save()
+
+        # Makes it unusable
+        otp_obj = OTP.objects.get(otp=otp)
+        otp_obj.is_valid = False
+        # NOTE: This is commented because we haven't set the Custom User as the auth model.
+        # try:
+        #     # Delete the previous token
+        #     old_token = Token.objects.get(user=user)
+        #     old_token.delete()
+
+        # except Token.DoesNotExist:
+        #     pass
+
+        #     # Creates a new token
+        # Token.objects.create(user=user)

@@ -31,7 +31,7 @@ class SendInBlueEmailSender(BaseEmailSender):
         template_id: str,
         internal_tracker_id: str,
         template_data: dict[str, Any],
-        metadata: dict[str, Any] | None,
+        metadata: dict[str, Any],  # | None/.
     ) -> None:
         """Send single template mail using sendinblue sender."""
 
@@ -65,7 +65,6 @@ class SendInBlueEmailSender(BaseEmailSender):
         internal_tracker_ids: list[str],
     ) -> None:
         """send multiple template emails."""
-
         if len(internal_tracker_ids) != len(recipients):
             Logger.error(
                 msg=(

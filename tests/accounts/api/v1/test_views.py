@@ -3,10 +3,13 @@ from unittest import mock
 from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
-from rest_framework.test import APITestCase
+from rest_framework import status
+from rest_framework.test import APIClient, APITestCase
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
-from uia_backend.accounts.models import CustomUser
+from uia_backend.accounts import constants
+from uia_backend.accounts.api.v1.serializers import VerifyOTPSerializer
+from uia_backend.accounts.models import OTP, CustomUser
 
 
 class UserRegistrationAPIViewTests(APITestCase):
@@ -136,3 +139,127 @@ class EmailVerificationAPIViewTests(APITestCase):
                 "message": "Invalid link or link has expired.",
             },
         )
+
+
+class ForgotPasswordAPIViewTestCase(APITestCase):
+    def setUp(self):
+        self.user = CustomUser.objects.create(
+            email="test@example.com", password="testpassword"
+        )
+
+    def test_post_with_valid_data(self):
+        url = reverse("accounts_api_v1:forget_password")
+        data = {"email": self.user.email}
+
+        @mock.patch("uia_backend.accounts.utils.send_user_forget_password_mail")
+        def test_forget_password_api(self, mock_send_mail):
+            response = self.client.post(url, data, format="json")
+            self.assertEqual(response.status_code, status.HTTP_200_OK)
+            mock_send_mail.assert_called_once(self.user, None, None)
+
+
+class VerifyOTPViewTestCase(APITestCase):
+    def setUp(self):
+        self.client = APIClient()
+        self.url = reverse("accounts_api_v1:verify_otp")
+        self.user = CustomUser.objects.create_user(
+            email="testuser@example.com", password="testpassword"
+        )
+        # To prevent 401 errors
+        self.client.force_authenticate(user=self.user)
+
+        self.expiry_time = timezone.now() + timezone.timedelta(
+            minutes=constants.OTP_ACTIVE_PERIOD
+        )
+        self.otp = OTP.objects.create(
+            user=self.user, otp="1234", expiry_time=self.expiry_time
+        )
+
+    def test_valid_post_request(self):
+        """
+        Test for valid post request with correct data
+        """
+        data = {
+            "email": self.user.email,
+            "otp": self.otp.otp,
+            "new_password": "newpassword",
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.data, {"detail": "Password has been reset successfully."}
+        )
+        # self.assertTrue(Token.objects.get(user=self.user))
+
+    def test_invalid_post_request(self):
+        """
+        Test for invalid post request with incorrect data
+        """
+        data = {
+            "email": "nonexistent@example.com",
+            "otp": self.otp.otp,
+            "new_password": "newpassword",
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(
+            response.data, {"email": ["No user with this email address exists."]}
+        )
+
+    def test_invalid_otp(self):
+        """
+        Test for invalid OTP
+        """
+        data = {"email": self.user.email, "otp": "4321", "new_password": "newpassword"}
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"non_field_errors": ["Invalid OTP."]})
+
+    def test_expired_otp(self):
+        """
+        Test for expired OTP
+        """
+        expiry_time = timezone.now() - timezone.timedelta(minutes=5)
+        self.otp.expiry_time = expiry_time
+        self.otp.save()
+        data = {
+            "email": self.user.email,
+            "otp": self.otp.otp,
+            "new_password": "newpassword",
+        }
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"non_field_errors": ["OTP has expired."]})
+
+    def test_missing_email_field(self):
+        """
+        Test for missing email field
+        """
+        data = {"otp": "123456", "new_password": "newpassword"}
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"email": ["This field is required."]})
+
+    def test_missing_otp_field(self):
+        """
+        Test for missing OTP field
+        """
+        data = {"email": self.user.email, "new_password": "newpassword"}
+        response = self.client.post(self.url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data, {"otp": ["This field is required."]})
+
+    def test_post_with_invalid_serializer(self):
+        data = {
+            "email": "testuser@example.com",
+            "otp": "1234",
+            "new_password": "newpassword123",
+        }
+        serializer = VerifyOTPSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+
+        # Invalidate the serializer by removing the required "new_password" field
+        data.pop("new_password")
+        response = self.client.post(self.url, data, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
