@@ -3,8 +3,8 @@ from django.urls import path
 from uia_backend.accounts.api.v1.views import (
     ChangePasswordAPIView,
     EmailVerificationAPIView,
-    UserProfileAPIView,
     LoginAPIView,
+    UserProfileAPIView,
     UserRegistrationAPIView,
 )
 

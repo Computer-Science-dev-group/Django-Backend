@@ -8,8 +8,8 @@ from tests.accounts.test_models import EmailVerificationFactory, UserModelFactor
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
-    UserProfileSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
 )
 from uia_backend.libs.testutils import CustomSerializerTests

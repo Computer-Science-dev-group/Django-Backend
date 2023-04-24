@@ -9,8 +9,8 @@ from rest_framework.response import Response
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
-    UserProfileSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
 )
 
