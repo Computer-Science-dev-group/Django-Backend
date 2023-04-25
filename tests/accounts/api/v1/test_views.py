@@ -215,7 +215,7 @@ class UserProfileAPIViewTests(APITestCase):
                 "date_of_birth": None,
                 "cover_photo": None,
                 "profile_picture": None,
-                "year_of_graduation": user_data["year_of_graduation"]
+                "year_of_graduation": user_data["year_of_graduation"],
             },
         )
 
