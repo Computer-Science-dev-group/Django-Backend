@@ -25,7 +25,7 @@ class SendFriendRequestView(generics.CreateAPIView):
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
         receiver_id = self.kwargs['receiver_id']
-        sender_id = self.request.data['id']
+        sender_id = self.request.kwargs['sender_id']
         
         receiver = CustomUser.objects.get(id = receiver_id)
         sender = CustomUser.objects.get(id = sender_id)
