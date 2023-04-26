@@ -100,7 +100,6 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         instance.is_active = False
         instance.user.is_active = True
         instance.user.save(update_fields=["is_active"])
-        instance.save(update_fields=["is_active"])
         return instance
 
     def validate(self, attrs: dict[str, Any]) -> EmailVerification:
@@ -127,6 +126,44 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: Any) -> Any:
         data = "Your account has been successfully verified."
+        return StructureSerializer.to_representation(data=data)
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for the Custom User Profile"""
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "first_name",
+            "last_name",
+            "profile_picture",
+            "cover_photo",
+            "phone_number",
+            "display_name",
+            "year_of_graduation",
+            "department",
+            "faculty",
+            "bio",
+            "gender",
+            "date_of_birth",
+        ]
+        read_only_fields = ["year_of_graduation", "department", "faculty"]
+
+    def update(
+        self, instance: CustomUser, validated_data: dict[str, Any]
+    ) -> CustomUser:
+        """
+        Update the profile for an existing `CustomUser` instance, given the validated data.
+        """
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = super().to_representation(instance)
         return StructureSerializer.to_representation(data=data)
 
 
