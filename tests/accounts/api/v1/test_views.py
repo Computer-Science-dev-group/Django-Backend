@@ -144,6 +144,110 @@ class EmailVerificationAPIViewTests(APITestCase):
         )
 
 
+class UserProfileAPIViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("accounts_api_v1:user_profile")
+        self.user = UserModelFactory.create(is_active=True, is_verified=True)
+
+    def test_unauthenticated_user_can_view_profile(self):
+        """Test if an unauthenticated user can view profile."""
+
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_view_profile(self):
+        """Test if an authenticated user can view profile."""
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            dict(response.data["message"]),
+            {
+                "first_name": self.user.first_name,
+                "last_name": self.user.last_name,
+                "profile_picture": None,
+                "cover_photo": None,
+                "faculty": self.user.faculty,
+                "department": self.user.department,
+                "year_of_graduation": self.user.year_of_graduation,
+                "bio": self.user.bio,
+                "gender": self.user.gender,
+                "display_name": self.user.display_name,
+                "phone_number": self.user.phone_number,
+                "date_of_birth": None,
+            },
+        )
+
+    def test_if_authenticated_user_can_update_profile(self):
+        """Test if an authenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "year_of_graduation": self.user.year_of_graduation,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertDictEqual(
+            dict(response.data["message"]),
+            {
+                "first_name": user_data["first_name"],
+                "last_name": user_data["last_name"],
+                "faculty": user_data["faculty"],
+                "department": user_data["department"],
+                "bio": user_data["bio"],
+                "gender": user_data["gender"],
+                "display_name": user_data["display_name"],
+                "phone_number": user_data["phone_number"],
+                "date_of_birth": None,
+                "cover_photo": None,
+                "profile_picture": None,
+                "year_of_graduation": user_data["year_of_graduation"],
+            },
+        )
+
+    def test_if_unauthenticated_user_can_update_profile(self):
+        """Test if an unauthenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 401)
+
+        self.assertDictEqual(
+            response.data,
+            {
+                "info": "Failure",
+                "message": "Authentication credentials were not provided.",
+            },
+        )
+
+
 class ChangePasswordAPIViewTests(APITestCase):
     def setUp(self):
         self.user = UserModelFactory.create(is_active=True)
