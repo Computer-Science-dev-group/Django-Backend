@@ -66,7 +66,7 @@ class AcceptFriendRequestView(generics.UpdateAPIView):
         }, status=status.HTTP_200_OK)
     
 class RejectFriendRequestView(generics.DestroyAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     serializer_class = RejectFriendRequestSerializer
     queryset = FriendsRelationship.objects.all()
     lookup_field = 'pk'
@@ -81,7 +81,7 @@ class RejectFriendRequestView(generics.DestroyAPIView):
         }, status=status.HTTP_200_OK)
     
 class BlockFriendView(generics.UpdateAPIView):
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated]
     queryset = FriendsRelationship.objects.all()
     serializer_class = BlockFriendSerializer
     lookup_field = 'pk'
