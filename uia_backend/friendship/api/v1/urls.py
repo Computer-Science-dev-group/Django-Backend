@@ -1,5 +1,5 @@
 from django.urls import path
-from friendship.api.v1.views import(
+from uia_backend.friendship.api.v1.views import(
     SendFriendRequestView,
     AcceptFriendRequestView,
     RejectFriendRequestView,

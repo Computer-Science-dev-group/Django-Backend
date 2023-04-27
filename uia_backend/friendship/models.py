@@ -16,6 +16,7 @@ class FriendsRelationship(models.Model):
     invite_status = models.CharField(max_length=10, choices=INVITE_STATUS,default="pending")
     is_blocked = models.BooleanField(default=False)
 
+
     def __str__(self):
         return f"Friend Request from {self.sender} to {self.receiver}"
 

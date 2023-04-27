@@ -1,6 +1,6 @@
 from rest_framework import serializers
-from friendship.models import FriendsRelationship
-from accounts.api.v1.serializers import (
+from uia_backend.friendship.models import FriendsRelationship
+from uia_backend.accounts.api.v1.serializers import (
     UserRegistrationSerializer
 )    
 

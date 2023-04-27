@@ -1,15 +1,15 @@
 from rest_framework import generics
 from rest_framework.response import Response
-from friendship.models import FriendsRelationship
+from uia_backend.friendship.models import FriendsRelationship
 from rest_framework import permissions, status
 from uia_backend.accounts.models import (
     CustomUser
 )
-from accounts.api.v1.serializers import(
+from uia_backend.accounts.api.v1.serializers import(
     UserRegistrationSerializer
 )
 
-from friendship.api.v1.serializers import(
+from uia_backend.friendship.api.v1.serializers import(
     FriendRequestSerializer,
     AcceptFriendRequestSerializer,
     RejectFriendRequestSerializer,
@@ -77,7 +77,7 @@ class RejectFriendRequestView(generics.DestroyAPIView):
         instance.delete()
         return Response(data={
             "info": "success",
-            "details": f"Friend request from {instance.sender.first_name} has been rejected successfully"
+            "details": f"Friend request from {instance.sender.first_name} has been rejected "
         }, status=status.HTTP_200_OK)
     
 class BlockFriendView(generics.UpdateAPIView):
