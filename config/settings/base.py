@@ -77,7 +77,7 @@ THIRD_PARTY_APPS = [
 LOCAL_APPS = [
     # Your stuff: custom apps go here
     "uia_backend.accounts",
-    "uia_backend.notification",
+    "uia_backend.notification",i
     "uia_backend.friendship",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
