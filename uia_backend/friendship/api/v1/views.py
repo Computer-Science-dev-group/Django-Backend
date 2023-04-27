@@ -33,7 +33,7 @@ class SendFriendRequestView(generics.CreateAPIView):
         if FriendsRelationship.objects.filter(sender=sender,receiver = receiver).exists():
             return Response({
                 "status": "error",
-                "details": "Freind request has been sent already."
+                "details": "Friend request has been sent already."
                 } ,status=status.HTTP_400_BAD_REQUEST)
             
         else:

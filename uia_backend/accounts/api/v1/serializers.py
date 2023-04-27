@@ -182,7 +182,7 @@ class LoginSerializer(serializers.Serializer):
             data["user"] = user
             return data
         raise serializers.ValidationError(
-            "Invalid credentials or your accoun is inactive."
+            "Invalid credentials or your account is inactive."
         )
 
     def to_representation(self, instance: dict[str, Any]) -> dict[str, Any]:
