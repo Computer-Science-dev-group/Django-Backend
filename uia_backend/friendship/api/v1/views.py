@@ -1,16 +1,15 @@
 from rest_framework import generics
 from rest_framework.response import Response
-from uia_backend.friendship.models import FriendsRelationship
+from friendship.models import FriendsRelationship
 from rest_framework import permissions, status
-from uia_backend.accounts.models import(
+from uia_backend.accounts.models import (
     CustomUser
 )
-
-from uia_backend.accounts.api.v1.serializers import(
+from accounts.api.v1.serializers import(
     UserRegistrationSerializer
 )
 
-from uia_backend.friendship.api.v1.serializers import(
+from friendship.api.v1.serializers import(
     FriendRequestSerializer,
     AcceptFriendRequestSerializer,
     RejectFriendRequestSerializer,
@@ -25,10 +24,13 @@ class SendFriendRequestView(generics.CreateAPIView):
    
     def create(self, request, *args, **kwargs):
         serializer = self.serializer_class(data=request.data)
-        receiver_id = self.kwargs['receiver_id']    
+        receiver_id = self.kwargs['receiver_id']
+        sender_id = self.kwargs['sender_id']
+        
         receiver = CustomUser.objects.get(id = receiver_id)
-    
-        if FriendsRelationship.objects.filter(sender=request.user,receiver= receiver).exists():
+        sender = CustomUser.objects.get(id = sender_id)
+       
+        if FriendsRelationship.objects.filter(sender=sender,receiver = receiver).exists():
             return Response({
                 "status": "error",
                 "details": "Freind request has been sent already."
@@ -36,7 +38,7 @@ class SendFriendRequestView(generics.CreateAPIView):
             
         else:
             serializer.is_valid(raise_exception= True)
-            serializer.save(sender=request.user, receiver = receiver)   
+            serializer.save(sender= sender, receiver = receiver)   
             return Response(
                 {
             "status": "success",
@@ -46,6 +48,7 @@ class SendFriendRequestView(generics.CreateAPIView):
 
        
 class AcceptFriendRequestView(generics.UpdateAPIView):
+
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = AcceptFriendRequestSerializer
     queryset = FriendsRelationship.objects.all()
@@ -93,4 +96,13 @@ class BlockFriendView(generics.UpdateAPIView):
         return Response(data={
             "info": "success",
             "details": f"{instance.sender.first_name} has been blocked Succefully"
-        }, status=status.HTTP_200_OK)
+        }, status=status.HTTP_200_OK) 
+
+
+
+        
+
+
+    
+    
+    
