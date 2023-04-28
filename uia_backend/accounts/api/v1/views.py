@@ -10,6 +10,7 @@ from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
 )
 
@@ -67,6 +68,44 @@ class EmailVerificationAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(data=serializer.data)
+
+
+class UserProfileAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "put"]
+
+    def get_object(self) -> Any:
+        return self.request.user
+
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": {
+                        "first_name": "string",
+                        "last_name": "string",
+                        "faculty": "string",
+                        "department": "string",
+                        "year_of_graduation": "2001",
+                        "bio": "string",
+                        "display_name": "string",
+                        "phone_number": "string",
+                        "cover_photo": "string",
+                        "profile_picture": "string",
+                        "gender": "string",
+                    },
+                },
+            )
+        ]
+    )
+    def put(self, request, *args, **kwargs) -> Response:
+        """Subsequent updates to the user profile"""
+        return super().put(request, *args, **kwargs)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):
