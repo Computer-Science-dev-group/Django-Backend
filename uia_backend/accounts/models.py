@@ -88,5 +88,5 @@ class OTP(BaseAbstractModel):
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     otp = models.CharField(max_length=10)
-    is_valid = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=False)
     expiry_time = models.DateTimeField()

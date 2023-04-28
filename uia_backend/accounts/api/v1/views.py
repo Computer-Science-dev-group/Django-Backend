@@ -88,12 +88,11 @@ class ForgotPasswordAPIView(generics.GenericAPIView):
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {"detail": "OTP sent to email address."}, status=status.HTTP_200_OK
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "OTP sent to email address."}, status=status.HTTP_200_OK
+        )
 
 
 class VerifyOTPView(generics.GenericAPIView):
