@@ -100,6 +100,7 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         instance.is_active = False
         instance.user.is_active = True
         instance.user.save(update_fields=["is_active"])
+        instance.save(update_fields=["is_active"])
         return instance
 
     def validate(self, attrs: dict[str, Any]) -> EmailVerification:
