@@ -30,14 +30,6 @@ EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend"
 )
 
-# EMAIL_BACKEND = "anymail.backends.sendinblue.EmailBackend"
-# ANYMAIL = {
-#     "SENDINBLUE_API_KEY": "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"
-# }
-
-# SENDINBLUE_API_URL = "https://api.sendinblue.com/v3/"
-# EMAIL_HOST = 'smtp-relay.sendinblue.com'
-
 
 # WhiteNoise
 # ------------------------------------------------------------------------------
