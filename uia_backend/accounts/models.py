@@ -87,6 +87,15 @@ class OTP(BaseAbstractModel):
     """
 
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    otp = models.CharField(max_length=10)
-    is_valid = models.BooleanField(default=False)
+    otp = models.CharField(max_length=128)
+    is_active = models.BooleanField(default=True)
     expiry_time = models.DateTimeField()
+
+
+class PasswordEmailReset(BaseAbstractModel):
+    """Model that represent a mail sent to a user for email verification."""
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    internal_tracker_id = models.UUIDField(default=uuid.uuid4)
+    is_active = models.BooleanField(default=True)
+    expiration_date = models.DateTimeField()

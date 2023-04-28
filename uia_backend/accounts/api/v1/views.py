@@ -11,6 +11,7 @@ from uia_backend.accounts.api.v1.serializers import (
     EmailVerificationSerializer,
     ForgetPasswordSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyOTPSerializer,
 )
@@ -88,12 +89,11 @@ class ForgotPasswordAPIView(generics.GenericAPIView):
         serializer = self.serializer_class(
             data=request.data, context={"request": request}
         )
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {"detail": "OTP sent to email address."}, status=status.HTTP_200_OK
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"detail": "OTP sent to email address."}, status=status.HTTP_200_OK
+        )
 
 
 class VerifyOTPView(generics.GenericAPIView):
@@ -102,18 +102,53 @@ class VerifyOTPView(generics.GenericAPIView):
     """
 
     serializer_class = VerifyOTPSerializer
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {"detail": "Password has been reset successfully."},
-                status=status.HTTP_200_OK,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            {"detail": "Password has been reset successfully."},
+            status=status.HTTP_200_OK,
+        )
 
-        return Response(data=serializer.data)
+
+class UserProfileAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "put"]
+
+    def get_object(self) -> Any:
+        return self.request.user
+
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": {
+                        "first_name": "string",
+                        "last_name": "string",
+                        "faculty": "string",
+                        "department": "string",
+                        "year_of_graduation": "2001",
+                        "bio": "string",
+                        "display_name": "string",
+                        "phone_number": "string",
+                        "cover_photo": "string",
+                        "profile_picture": "string",
+                        "gender": "string",
+                    },
+                },
+            )
+        ]
+    )
+    def put(self, request, *args, **kwargs) -> Response:
+        """Subsequent updates to the user profile"""
+        return super().put(request, *args, **kwargs)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):

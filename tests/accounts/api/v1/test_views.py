@@ -6,7 +6,7 @@ from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import status
-from rest_framework.test import APIClient, APITestCase
+from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
@@ -152,21 +152,26 @@ class ForgotPasswordAPIViewTestCase(APITestCase):
         self.user = CustomUser.objects.create(
             email="test@example.com", password="testpassword"
         )
+        self.url = reverse("accounts_api_v1:forget_password")
+        self.data = {"email": self.user.email}
 
-    def test_post_with_valid_data(self):
-        url = reverse("accounts_api_v1:forget_password")
-        data = {"email": self.user.email}
+    def test_forget_password_api(self):
+        response = self.client.post(self.url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"detail": "OTP sent to email address."})
 
-        @mock.patch("uia_backend.accounts.utils.send_user_forget_password_mail")
-        def test_forget_password_api(self, mock_send_mail):
-            response = self.client.post(url, data, format="json")
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            mock_send_mail.assert_called_once(self.user, None, None)
+    @mock.patch("uia_backend.notification.tasks.send_template_email_task.delay")
+    def test_user_registration_valid_data_successful(self, mock_send_email_task):
+        """
+        Test that user registration with valid data is successful.
+        """
+        self.client.post(self.url, self.data, format="json")
+        mock_send_email_task.assert_called_once()
 
 
 class VerifyOTPViewTestCase(APITestCase):
     def setUp(self):
-        self.client = APIClient()
+        signer = signing.TimestampSigner()
         self.url = reverse("accounts_api_v1:verify_otp")
         self.user = CustomUser.objects.create_user(
             email="testuser@example.com", password="testpassword"
@@ -177,9 +182,12 @@ class VerifyOTPViewTestCase(APITestCase):
         self.expiry_time = timezone.now() + timezone.timedelta(
             minutes=constants.OTP_ACTIVE_PERIOD
         )
+        self.otp_value = "1234"
+        self.signed_otp = signer.sign(self.otp_value)
         self.otp = OTP.objects.create(
-            user=self.user, otp="1234", expiry_time=self.expiry_time
+            user=self.user, otp=self.signed_otp, expiry_time=self.expiry_time
         )
+        self.unsigned_otp = signer.sign(self.otp.otp)
 
     def test_valid_post_request(self):
         """
@@ -187,7 +195,7 @@ class VerifyOTPViewTestCase(APITestCase):
         """
         data = {
             "email": self.user.email,
-            "otp": self.otp.otp,
+            "otp": self.otp_value,
             "new_password": "newpassword",
         }
         response = self.client.post(self.url, data, format="json")
@@ -208,9 +216,7 @@ class VerifyOTPViewTestCase(APITestCase):
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data, {"email": ["No user with this email address exists."]}
-        )
+        self.assertEqual(response.data, {"info": "Failure", "message": "Invalid Email"})
 
     def test_invalid_otp(self):
         """
@@ -219,23 +225,25 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"email": self.user.email, "otp": "4321", "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"non_field_errors": ["Invalid OTP."]})
+        self.assertEqual(response.data, {"info": "Failure", "message": "Invalid OTP"})
 
     def test_expired_otp(self):
         """
         Test for expired OTP
         """
-        expiry_time = timezone.now() - timezone.timedelta(minutes=5)
+        expiry_time = timezone.now() - timezone.timedelta(minutes=35)
         self.otp.expiry_time = expiry_time
         self.otp.save()
         data = {
             "email": self.user.email,
-            "otp": self.otp.otp,
+            "otp": self.otp_value,
             "new_password": "newpassword",
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"non_field_errors": ["OTP has expired."]})
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "OTP has expired"}
+        )
 
     def test_missing_email_field(self):
         """
@@ -244,7 +252,9 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"otp": "123456", "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"email": ["This field is required."]})
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "This field is required."}
+        )
 
     def test_missing_otp_field(self):
         """
@@ -253,7 +263,9 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"email": self.user.email, "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"otp": ["This field is required."]})
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "This field is required."}
+        )
 
     def test_post_with_invalid_serializer(self):
         data = {
@@ -269,6 +281,108 @@ class VerifyOTPViewTestCase(APITestCase):
         response = self.client.post(self.url, data, format="json")
 
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+class UserProfileAPIViewTests(APITestCase):
+    def setUp(self):
+        self.url = reverse("accounts_api_v1:user_profile")
+        self.user = UserModelFactory.create(is_active=True, is_verified=True)
+
+    def test_unauthenticated_user_can_view_profile(self):
+        """Test if an unauthenticated user can view profile."""
+
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_view_profile(self):
+        """Test if an authenticated user can view profile."""
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url, args=[self.user.id])
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            dict(response.data["message"]),
+            {
+                "first_name": self.user.first_name,
+                "last_name": self.user.last_name,
+                "profile_picture": None,
+                "cover_photo": None,
+                "faculty": self.user.faculty,
+                "department": self.user.department,
+                "year_of_graduation": self.user.year_of_graduation,
+                "bio": self.user.bio,
+                "gender": self.user.gender,
+                "display_name": self.user.display_name,
+                "phone_number": self.user.phone_number,
+                "date_of_birth": None,
+            },
+        )
+
+    def test_if_authenticated_user_can_update_profile(self):
+        """Test if an authenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "year_of_graduation": self.user.year_of_graduation,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertDictEqual(
+            dict(response.data["message"]),
+            {
+                "first_name": user_data["first_name"],
+                "last_name": user_data["last_name"],
+                "faculty": user_data["faculty"],
+                "department": user_data["department"],
+                "bio": user_data["bio"],
+                "gender": user_data["gender"],
+                "display_name": user_data["display_name"],
+                "phone_number": user_data["phone_number"],
+                "date_of_birth": None,
+                "cover_photo": None,
+                "profile_picture": None,
+                "year_of_graduation": user_data["year_of_graduation"],
+            },
+        )
+
+    def test_if_unauthenticated_user_can_update_profile(self):
+        """Test if an unauthenticated user can update profile."""
+
+        user_data = {
+            "first_name": self.user.first_name,
+            "last_name": self.user.last_name,
+            "email": self.user.email,
+            "password": self.user.password,
+            "faculty": self.user.faculty,
+            "department": self.user.department,
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "John Peters",
+            "phone_number": "08020444345",
+        }
+
+        response = self.client.put(path=self.url, data=user_data)
+
+        self.assertEqual(response.status_code, 401)
+
+        self.assertDictEqual(
+            response.data,
+            {
+                "info": "Failure",
+                "message": "Authentication credentials were not provided.",
+            },
+        )
 
 
 class ChangePasswordAPIViewTests(APITestCase):

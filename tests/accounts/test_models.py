@@ -2,6 +2,7 @@ from django.test import TestCase
 from factory.django import DjangoModelFactory
 
 from uia_backend.accounts.models import (
+    OTP,
     CustomUser,
     EmailVerification,
     user_cover_profile_upload_location,
@@ -73,3 +74,8 @@ class UserCoverProfileUploadLocation(TestCase):
 class EmailVerificationFactory(DjangoModelFactory):
     class Meta:
         model = EmailVerification
+
+
+class OTPFactory(DjangoModelFactory):
+    class Meta:
+        model = OTP

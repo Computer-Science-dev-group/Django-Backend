@@ -5,6 +5,7 @@ from uia_backend.accounts.api.v1.views import (
     EmailVerificationAPIView,
     ForgotPasswordAPIView,
     LoginAPIView,
+    UserProfileAPIView,
     UserRegistrationAPIView,
     VerifyOTPView,
 )
@@ -24,6 +25,7 @@ urlpatterns = [
     ),
     path("verify-otp/", VerifyOTPView.as_view(), name="verify_otp"),
     # AUTHENTICATED USER SPECIFIC VIEWS
+    path("me/profile/", UserProfileAPIView.as_view(), name="user_profile"),
     path(
         "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),

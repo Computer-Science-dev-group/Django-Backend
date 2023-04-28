@@ -31,7 +31,7 @@ class SendInBlueEmailSender(BaseEmailSender):
         template_id: str,
         internal_tracker_id: str,
         template_data: dict[str, Any],
-        metadata: dict[str, Any],  # | None/.
+        metadata: dict[str, Any] | None,
     ) -> None:
         """Send single template mail using sendinblue sender."""
 

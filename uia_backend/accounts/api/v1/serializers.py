@@ -2,10 +2,10 @@ import logging
 from datetime import datetime, timedelta
 from typing import Any
 
-from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.db.models import Q
 from django.utils import timezone
 from django.utils.crypto import get_random_string
 from rest_framework import serializers
@@ -21,9 +21,6 @@ from uia_backend.accounts.utils import (
 from uia_backend.libs.default_serializer import StructureSerializer
 
 logger = logging.getLogger()
-
-
-User = get_user_model()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
@@ -141,21 +138,29 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
 class ForgetPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
-    def validate_email(self, email):
-        user = CustomUser.objects.filter(email=email).first()
+    def validate_email(self, email: str) -> str:
+        user = CustomUser.objects.filter(Q(email=email)).first()
         if not user:
-            raise serializers.ValidationError("No user with this email address exists.")
+            raise serializers.ValidationError("Invalid Email")
         return email
 
-    def save(self):
+    def save(self) -> None:
         email = self.validated_data["email"]
         user = CustomUser.objects.get(email=email)
         otp = get_random_string(
             length=constants.OTP_CHARACTER_LENGTH, allowed_chars="0123456789"
         )
-        otp_expiry_time = timezone.now() + timezone.timedelta(minutes=30)
-        OTP.objects.create(user=user, otp=otp, expiry_time=otp_expiry_time)
+        signer = signing.TimestampSigner()
+        signed_otp = signer.sign(otp)
+        otp_expiry_time = timezone.now() + timezone.timedelta(
+            minutes=constants.OTP_MINUTES_EXPIRY_TIME
+        )
+        OTP.objects.create(user=user, otp=signed_otp, expiry_time=otp_expiry_time)
         send_user_forget_password_mail(user, request=self.context["request"], otp=otp)
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = "Password Reset OTP code sent to your email"
+        return StructureSerializer.to_representation(data=data)
 
 
 class VerifyOTPSerializer(serializers.Serializer):
@@ -163,32 +168,38 @@ class VerifyOTPSerializer(serializers.Serializer):
     otp = serializers.CharField(max_length=6)
     new_password = serializers.CharField(max_length=40)
 
-    def validate_email(self, email):
+    def validate_email(self, email: str) -> str:
         user = CustomUser.objects.filter(email=email).first()
         if not user:
-            raise serializers.ValidationError("No user with this email address exists.")
+            raise serializers.ValidationError("Invalid Email")
         return email
 
-    def validate(self, data):
+    def validate(self, data: str) -> str:
         email = data["email"]
         otp = data["otp"]
         user = CustomUser.objects.get(email=email)
 
         # Get the most recent OTP for this user
         otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
-        if otp_obj.otp != otp:
-            raise serializers.ValidationError("Invalid OTP.")
-        if len(otp) > constants.OTP_CHARACTER_LENGTH:
-            raise serializers.ValidationError("Invalid OTP.")
-        # Checks if it has expired #NOTE: We could use a cron job for this task that sets the OTP to be invalid
-        if timezone.now() > otp_obj.expiry_time:
-            raise serializers.ValidationError("OTP has expired.")
+        signer = signing.TimestampSigner()
+        try:
+            unsigned_otp = signer.unsign(
+                otp_obj.otp,
+                max_age=timezone.timedelta(minutes=constants.OTP_MINUTES_EXPIRY_TIME),
+            )
+        except signing.SignatureExpired:
+            raise serializers.ValidationError("OTP has expired")
+        if unsigned_otp != otp:
+            raise serializers.ValidationError("Invalid OTP")
+        if timezone.now() > otp_obj.expiry_time + timezone.timedelta(
+            minutes=constants.OTP_MINUTES_EXPIRY_TIME
+        ):
+            raise serializers.ValidationError("OTP has expired")
         return data
 
-    def save(self):
+    def save(self) -> None:
         email = self.validated_data["email"]
         user = CustomUser.objects.get(email=email)
-        otp = self.validated_data["otp"]
         new_password = self.validated_data["new_password"]
         user.set_password(new_password)
         user.save()
@@ -196,17 +207,47 @@ class VerifyOTPSerializer(serializers.Serializer):
         # Makes it unusable
         otp_obj = OTP.objects.get(otp=otp)
         otp_obj.is_valid = False
-        # NOTE: This is commented because we haven't set the Custom User as the auth model.
-        # try:
-        #     # Delete the previous token
-        #     old_token = Token.objects.get(user=user)
-        #     old_token.delete()
+        otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
+        otp_obj.is_active = False
+        otp_obj.save()
 
-        # except Token.DoesNotExist:
-        #     pass
 
-        #     # Creates a new token
-        # Token.objects.create(user=user)
+class UserProfileSerializer(serializers.ModelSerializer):
+    """Serializer for the Custom User Profile"""
+
+    class Meta:
+        model = CustomUser
+        fields = [
+            "first_name",
+            "last_name",
+            "profile_picture",
+            "cover_photo",
+            "phone_number",
+            "display_name",
+            "year_of_graduation",
+            "department",
+            "faculty",
+            "bio",
+            "gender",
+            "date_of_birth",
+        ]
+        read_only_fields = ["year_of_graduation", "department", "faculty"]
+
+    def update(
+        self, instance: CustomUser, validated_data: dict[str, Any]
+    ) -> CustomUser:
+        """
+        Update the profile for an existing `CustomUser` instance, given the validated data.
+        """
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        return instance
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = super().to_representation(instance)
+        return StructureSerializer.to_representation(data=data)
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):

@@ -1,14 +1,15 @@
 import uuid
-from unittest.mock import patch
 
 from dateutil.relativedelta import relativedelta
 from django.core import signing
 from django.utils import timezone
-from rest_framework import serializers
-from rest_framework.exceptions import ValidationError
-from rest_framework.test import APITestCase
 
-from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
+from tests.accounts.test_models import (
+    EmailVerificationFactory,
+    OTPFactory,
+    UserModelFactory,
+)
+from uia_backend.accounts import constants
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
@@ -17,7 +18,6 @@ from uia_backend.accounts.api.v1.serializers import (
     UserRegistrationSerializer,
     VerifyOTPSerializer,
 )
-from uia_backend.accounts.models import OTP, CustomUser
 from uia_backend.libs.testutils import CustomSerializerTests
 
 
@@ -199,13 +199,15 @@ class VerifyOTPSerializerTestCase(APITestCase):
         super().setUpClass()
         cls.email = "test@example.com"
         cls.otp = "1234"
+        cls.signer = signing.TimestampSigner()
+        cls.signed_otp = cls.signer.sign(cls.otp)
         cls.new_password = "newpassword123"
         cls.user = CustomUser.objects.create(email=cls.email)
         cls.user.set_password(cls.new_password)
         cls.user.save()
         OTP.objects.create(
             user=cls.user,
-            otp=cls.otp,
+            otp=cls.signed_otp,
             expiry_time=timezone.now() + timezone.timedelta(minutes=30),
         )
 
@@ -271,8 +273,88 @@ class VerifyOTPSerializerTestCase(APITestCase):
         serializer.save()
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(self.new_password))
-        self.assertFalse(OTP.objects.get(otp=self.otp).is_valid)
+        self.assertFalse(OTP.objects.get(otp=self.signed_otp).is_active)
         # self.assertIsNotNone(Token.objects.get(user=self.user))
+class UserProfileSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = UserProfileSerializer
+
+    REQUIRED_FIELDS = [
+        "first_name",
+        "last_name",
+        "display_name",
+    ]
+
+    NON_REQUIRED_FIELDS = [
+        "profile_picture",
+        "cover_photo",
+        "phone_number",
+        "bio",
+        "gender",
+        "date_of_birth",
+        "year_of_graduation",
+        "department",
+        "faculty",
+    ]
+
+    VALID_DATA = [
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "password": "f_g68Ata7jPqqmm",
+                "faculty": "Science",
+                "department": "Computer Science",
+                "year_of_graduation": "2001",
+                "bio": "Hi, I am a graduate of Computer Science, UI",
+                "gender": "Male",
+                "display_name": "John Peters",
+                "phone_number": "08020444345",
+            },
+        },
+    ]
+
+    INVALID_DATA = [
+        {
+            "data": {
+                "first_name": "",
+                "last_name": "",
+                "email": "user@example.com",
+                "faculty": "Science",
+                "department": "Computer Science",
+                "year_of_graduation": "1901",
+            },
+            "lable": "Test first_name and last_name failed",
+            "context": None,
+        },
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "password": "f_g68Ata7jPqqmm",
+                "faculty": "Science",
+                "department": "",
+                "year_of_graduation": "2s21",
+            },
+            "lable": "Test writing to department field failed",
+            "context": None,
+        },
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "faculty": "",
+                "department": "Computer Science",
+                "year_of_graduation": "2001",
+            },
+            "lable": "Test writing to faculty field failed",
+            "context": None,
+        },
+    ]
 
 
 class ChangePasswordSerializerTests(CustomSerializerTests):
@@ -349,5 +431,106 @@ class LoginSerializerTests(CustomSerializerTests):
                 "data": {"password": "12345", "email": "inactive@example.com"},
                 "lable": "Test invalid inactive user.",
                 "context": None,
+            },
+        ]
+
+
+class ForgetPasswordSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = ForgetPasswordSerializer
+
+    REQUIRED_FIELDS = ["email"]
+    NON_REQUIRED_FIELDS = []
+
+    def setUp(self) -> None:
+        user = UserModelFactory.create(email="user@example.com")
+        user.set_password("thestrongestpassword")
+        user.save()
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "email": "user@example.com",
+                },
+                "lable": "Test valid data",
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "email": "noob@invalid.com",
+                },
+                "lable": "Test invalid bad email",
+            },
+            {
+                "data": {
+                    "email": "nonexistent.com",
+                },
+                "lable": "Invalid Email Record",
+            },
+        ]
+
+
+class VerifyOTPSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = VerifyOTPSerializer
+
+    REQUIRED_FIELDS = ["email", "otp", "new_password"]
+    NON_REQUIRED_FIELDS = []
+
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com")
+        self.user.set_password("thestrongestpassword")
+        self.user.save()
+
+        self.otp_val = "1234"
+        self.signer = signing.TimestampSigner()
+        self.signed_otp = self.signer.sign(self.otp_val)
+
+        self.new_password = "newpassword1"
+
+        self.otp = OTPFactory.create(
+            user=self.user,
+            otp=self.signed_otp,
+            expiry_time=timezone.now()
+            + timezone.timedelta(minutes=constants.OTP_MINUTES_EXPIRY_TIME),
+        )
+
+        self.invalid_otp = OTPFactory.create(
+            user=self.user,
+            otp=self.signed_otp,
+            expiry_time=timezone.now() - timezone.timedelta(minutes=31),
+        )
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "email": self.user.email,
+                    "otp": self.otp_val,
+                    "new_password": self.new_password,
+                },
+                "lable": "Test valid data",
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "email": "noob@invalid.com",
+                    "otp": self.otp,
+                    "new_password": self.new_password,
+                },
+                "lable": "Test invalid bad email",
+            },
+            {
+                "data": {
+                    "email": self.user.email,
+                    "otp": "wontwork",
+                    "new_password": self.new_password,
+                },
+                "lable": "Test Invalid OTP",
             },
         ]
