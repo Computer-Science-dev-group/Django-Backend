@@ -27,21 +27,18 @@ class FriendRequestSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         sender = validated_data.get("sender")
         receiver = validated_data.get("receiver")
+        validated_data["invite_status"] = "pending"
 
         if FriendsRelationship.objects.filter(sender=sender, receiver=receiver).exists():
             raise serializers.ValidationError("You have already sent a friend request to this user.")
 
         if FriendsRelationship.objects.filter(sender=receiver, receiver=sender).exists():
             raise serializers.ValidationError("You have already received a friend request from this user.")
+        
 
         return FriendsRelationship.objects.create(**validated_data)
     
-    def update(self, instance, validated_data):
-        instance.is_friend = validated_data.get("is_friend", instance.is_friend)
-        instance.invite_status = validated_data.get("invite_status", instance.invite_status)
-        instance.is_blocked = validated_data.get("is_blocked", instance.is_blocked)
-        instance.save()
-        return instance
+   
 
     
 
@@ -50,7 +47,15 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 class AcceptFriendRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model  = FriendsRelationship
-        fields = ["id", "sender", "receiver"]
+        fields = ["sender", "receiver"]
+
+    #change the invite status to accepted and is_friend to true
+    def update(self, instance, validated_data):
+        instance = super().update(instance, validated_data)
+        if instance.invite_status == "accepted":
+            instance.is_friend = True
+            instance.save()
+        return instance
 
 
 
@@ -61,11 +66,14 @@ class RejectFriendRequestSerializer(serializers.ModelSerializer):
         fields = ["id", "sender", "receiver"]
 
     def update(self, instance, validated_data):
-        instance.is_friend = validated_data.get("is_friend", instance.is_friend)
-        instance.invite_status = validated_data.get("invite_status", instance.invite_status)
-        instance.is_blocked = validated_data.get("is_blocked", instance.is_blocked)
-        instance.save()
+        instance = super().update(instance, validated_data)
+        validated_data['invite_status'] = 'rejected'
+
+        if instance.invite_status == "rejected":
+            instance.is_friend = False
+            instance.save()
         return instance
+
 
 
 
