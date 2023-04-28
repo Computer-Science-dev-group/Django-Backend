@@ -14,6 +14,7 @@ from uia_backend.accounts.api.v1.serializers import (
     EmailVerificationSerializer,
     ForgetPasswordSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyOTPSerializer,
 )
@@ -154,6 +155,88 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
         ]
 
 
+class UserProfileSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = UserProfileSerializer
+
+    REQUIRED_FIELDS = [
+        "first_name",
+        "last_name",
+        "display_name",
+    ]
+
+    NON_REQUIRED_FIELDS = [
+        "profile_picture",
+        "cover_photo",
+        "phone_number",
+        "bio",
+        "gender",
+        "date_of_birth",
+        "year_of_graduation",
+        "department",
+        "faculty",
+    ]
+
+    VALID_DATA = [
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "password": "f_g68Ata7jPqqmm",
+                "faculty": "Science",
+                "department": "Computer Science",
+                "year_of_graduation": "2001",
+                "bio": "Hi, I am a graduate of Computer Science, UI",
+                "gender": "Male",
+                "display_name": "John Peters",
+                "phone_number": "08020444345",
+            },
+        },
+    ]
+
+    INVALID_DATA = [
+        {
+            "data": {
+                "first_name": "",
+                "last_name": "",
+                "email": "user@example.com",
+                "faculty": "Science",
+                "department": "Computer Science",
+                "year_of_graduation": "1901",
+            },
+            "lable": "Test first_name and last_name failed",
+            "context": None,
+        },
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "password": "f_g68Ata7jPqqmm",
+                "faculty": "Science",
+                "department": "",
+                "year_of_graduation": "2s21",
+            },
+            "lable": "Test writing to department field failed",
+            "context": None,
+        },
+        {
+            "data": {
+                "first_name": "John",
+                "last_name": "Doe",
+                "email": "user@example.com",
+                "faculty": "",
+                "department": "Computer Science",
+                "year_of_graduation": "2001",
+            },
+            "lable": "Test writing to faculty field failed",
+            "context": None,
+        },
+    ]
+
+
 class ForgetPasswordSerializerTestCase(APITestCase):
     def setUp(self):
         self.user = CustomUser.objects.create(
@@ -290,6 +373,7 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
             "context": None,
         }
     ]
+
     INVALID_DATA = [
         {
             "data": {"password": "string"},
