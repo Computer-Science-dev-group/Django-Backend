@@ -1,14 +1,12 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Any
-
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
-
 from uia_backend.accounts import constants
 from uia_backend.accounts.models import CustomUser, EmailVerification
 from uia_backend.accounts.utils import (

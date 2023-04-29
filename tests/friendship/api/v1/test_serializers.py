@@ -1,16 +1,11 @@
-from django.test import TestCase
-from rest_framework.exceptions import ValidationError
-from uia_backend.accounts.models import CustomUser
-from uia_backend.friendship.models import FriendsRelationship
-from uia_backend.friendship.api.v1.serializers import FriendRequestSerializer
-from uia_backend.friendship.api.v1.serializers import(
-    FriendRequestSerializer,
+from tests.accounts.test_models import UserModelFactory
+
+# from tests.friendship.test_models import FriendShipModelFactory
+from uia_backend.friendship.api.v1.serializers import (
     AcceptFriendRequestSerializer,
-    RejectFriendRequestSerializer,
-    BlockFriendSerializer,
+    FriendRequestSerializer,
 )
 from uia_backend.libs.testutils import CustomSerializerTests
-
 
 # class FriendRequestSerializerTest(TestCase):
 #     def setUp(self):
@@ -20,7 +15,7 @@ from uia_backend.libs.testutils import CustomSerializerTests
 #         self.user2 = CustomUser.objects.create_user(
 #         email="user2@example.com", password="password"
 #         )
-    
+
 #     def test_create(self):
 #         data = {
 #             "sender": str(self.user1.id),
@@ -75,7 +70,7 @@ from uia_backend.libs.testutils import CustomSerializerTests
 #         serializer = FriendRequestSerializer(data=data)
 #         with self.assertRaises(ValidationError):
 #             serializer.is_valid(raise_exception=True)
-        
+
 
 #     def test_reject_friend_request(self):
 #         friendship = FriendsRelationship.objects.create(sender=self.user1, receiver=self.user2)
@@ -124,7 +119,47 @@ from uia_backend.libs.testutils import CustomSerializerTests
 #         self.assertEqual(friendship.is_blocked, True)
 
 
+class AcceptFriendRequestSerializerTests(CustomSerializerTests):
+    __test__ = True
 
+    serializer_class = AcceptFriendRequestSerializer
+
+    REQUIRED_FIELDS = ["sender", "receiver"]
+
+    NON_REQUIRED_FIELDS = []
+
+    def setUp(self):
+        user1 = UserModelFactory.create(email="abdullahi@mail.com", is_active=True)
+        user2 = UserModelFactory.create(email="abdullahi@mail.com", is_active=True)
+        # friendship = FriendShipModelFactory.create(
+        #     sender=user1, receiver=user2, is_friend=False, invite_status="pending"
+        # )
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "sender": user1.id,
+                    "receiver": user2.id,
+                    "is_friend": True,
+                    "invite_status": "accepted",
+                },
+                "lable": "Test valid data",
+                "context": None,
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "sender": "kfsajkcinwdjfj",
+                    "receiver": user2.id,
+                    "is_friend": False,
+                    "invite_status": "accepted",
+                },
+                "lable": "Test invalid data users not friends",
+                "context": None,
+            },
+        ]
 
 
 class FriendRequestSerializerTests(CustomSerializerTests):
@@ -136,33 +171,32 @@ class FriendRequestSerializerTests(CustomSerializerTests):
 
     NON_REQUIRED_FIELDS = []
 
-    def setup(self):
-        self.user1 = CustomUser.objects.create_user(
-            email="abdullahi@mail.com",is_active=True)
-        self.user2 = CustomUser.objects.create_user(
-            email="abdullahi@mail.com",id=2,is_active=True
-        )
+    def setUp(self):
+        user1 = UserModelFactory.create(email="abdullahi@mail.com", is_active=True)
+        user2 = UserModelFactory.create(email="user@example.com", is_active=True)
 
         self.VALID_DATA = [
             {
-                "data": {
-                    "sender": self.user1.id,
-                },
+                "data": {"sender": user1.id, "receiver": user2.id},
                 "lable": "Test valid data",
                 "context": None,
             }
         ]
 
         self.INVALID_DATA = [
-        {
-            "data": {
-                "sender": "0909scjsfnwjenfcjwef",
+            {
+                "data": {"sender": "0909scjsfnwjenfcjwef", "receiver": user2.id},
+                "lable": "Test invalid data wrong sender id",
+                "context": None,
             },
-            "lable": "Test invalid data wrong sender id",
-            "context": None,
-        },
-       
-    ]
-
-
-AcceptFriendRequestSerializer
+            {
+                "data": {"sender": user1.id, "receiver": "reofdk-wvjpfpdks-3jndn"},
+                "lable": "Test invalid data wrong reciever id",
+                "context": None,
+            },
+            {
+                "data": {"sender": user1.id, "receiver": user2.id},
+                "lable": "Test innvalid data same sender id",
+                "context": None,
+            },
+        ]
