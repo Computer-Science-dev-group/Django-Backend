@@ -9,7 +9,7 @@ from uia_backend.friendship.api.v1.views import (
 
 urlpatterns = [
     path(
-        "send-friend-request/<str:sender_id>/<str:receiver_id>/",
+        "send-friend-request/<uuid:receiver_id>/",
         SendFriendRequestView.as_view(),
         name="send-friend-request",
     ),

@@ -1,5 +1,6 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
+from rest_framework import response
 
 from uia_backend.accounts.api.v1.serializers import UserRegistrationSerializer
 from uia_backend.accounts.models import CustomUser
@@ -17,32 +18,25 @@ class SendFriendRequestView(generics.CreateAPIView):
     serializer_class = FriendRequestSerializer
     queryset = FriendsRelationship.objects.all()
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data)
-        receiver_id = self.kwargs["receiver_id"]
-        sender_id = self.kwargs["sender_id"]
+    def create(self, request, receiver_id):
+        receiver_id = receiver_id
+        sender_id = request.user.id
 
+        context = {"sender": sender_id, "receiver": receiver_id}
+
+        serializer = FriendRequestSerializer(data=request.data, context=context)
         receiver = CustomUser.objects.get(id=receiver_id)
-        sender = CustomUser.objects.get(id=sender_id)
 
-        if FriendsRelationship.objects.filter(
-            sender=sender, receiver=receiver
-        ).exists():
-            return Response(
-                {"status": "error", "details": "Friend request has been sent already."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(sender=request.user, receiver=receiver)
 
-        else:
-            serializer.is_valid(raise_exception=True)
-            serializer.save(sender=sender, receiver=receiver)
-            return Response(
-                {
-                    "status": "success",
-                    "details": f"Your friend request to {receiver.first_name} {receiver.last_name} has been sent",
-                },
-                status=status.HTTP_201_CREATED,
-            )
+        return Response(
+            {
+                "status": "success",
+                "details": f"Your friend request to {receiver.first_name} {receiver.last_name} has been sent",
+            },
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class AcceptFriendRequestView(generics.UpdateAPIView):
