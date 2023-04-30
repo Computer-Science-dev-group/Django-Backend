@@ -164,7 +164,10 @@ class VerifyOTPSerializer(serializers.Serializer):
     def validate_email(self, email: str) -> str:
         user = CustomUser.objects.filter(email=email).first()
         if not user:
-            raise serializers.ValidationError("Invalid Email")
+            raise serializers.ValidationError(
+                {"message": "Invalid Email", "success": False, "data": [email]},
+                code="invalid",
+            )
         return email
 
     def validate(self, data: str) -> str:
@@ -203,14 +206,15 @@ class VerifyOTPSerializer(serializers.Serializer):
     def save(self):
         email = self.validated_data["email"]
         user = CustomUser.objects.get(email=email)
-        otp = self.validated_data["otp"]
+        # otp = self.otp_obj.otp
         new_password = self.validated_data["new_password"]
         user.set_password(new_password)
         user.save()
 
         # Makes it unusable
-        otp_obj = OTP.objects.get(otp=otp)
-        otp_obj.is_valid = False
+        otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
+        # otp_obj = OTP.objects.get(otp=otp_obj.otp)
+        otp_obj.is_active = False
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

@@ -166,6 +166,7 @@ class ForgotPasswordAPIViewTestCase(APITestCase):
 
 class VerifyOTPViewTestCase(APITestCase):
     def setUp(self):
+        signer = signing.TimestampSigner()
         self.client = APIClient()
         self.url = reverse("accounts_api_v1:verify_otp")
         self.user = CustomUser.objects.create_user(
@@ -177,9 +178,12 @@ class VerifyOTPViewTestCase(APITestCase):
         self.expiry_time = timezone.now() + timezone.timedelta(
             minutes=constants.OTP_ACTIVE_PERIOD
         )
+        self.otp_value = "1234"
+        self.signed_otp = signer.sign(self.otp_value)
         self.otp = OTP.objects.create(
-            user=self.user, otp="1234", expiry_time=self.expiry_time
+            user=self.user, otp=self.signed_otp, expiry_time=self.expiry_time
         )
+        self.unsigned_otp = signer.sign(self.otp.otp)
 
     def test_valid_post_request(self):
         """
@@ -187,7 +191,7 @@ class VerifyOTPViewTestCase(APITestCase):
         """
         data = {
             "email": self.user.email,
-            "otp": self.otp.otp,
+            "otp": self.otp_value,
             "new_password": "newpassword",
         }
         response = self.client.post(self.url, data, format="json")
@@ -208,9 +212,7 @@ class VerifyOTPViewTestCase(APITestCase):
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(
-            response.data, {"email": ["No user with this email address exists."]}
-        )
+        self.assertEqual(str(response.data["email"]["message"]), "Invalid Email")
 
     def test_invalid_otp(self):
         """
@@ -219,23 +221,23 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"email": self.user.email, "otp": "4321", "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"non_field_errors": ["Invalid OTP."]})
+        self.assertEqual(str(response.data["message"][0]), "Invalid OTP")
 
     def test_expired_otp(self):
         """
         Test for expired OTP
         """
-        expiry_time = timezone.now() - timezone.timedelta(minutes=5)
+        expiry_time = timezone.now() - timezone.timedelta(minutes=35)
         self.otp.expiry_time = expiry_time
         self.otp.save()
         data = {
             "email": self.user.email,
-            "otp": self.otp.otp,
+            "otp": self.otp_value,
             "new_password": "newpassword",
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"non_field_errors": ["OTP has expired."]})
+        self.assertEqual(str(response.data["message"][0]), "OTP has expired")
 
     def test_missing_email_field(self):
         """

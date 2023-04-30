@@ -282,13 +282,15 @@ class VerifyOTPSerializerTestCase(APITestCase):
         super().setUpClass()
         cls.email = "test@example.com"
         cls.otp = "1234"
+        cls.signer = signing.TimestampSigner()
+        cls.signed_otp = cls.signer.sign(cls.otp)
         cls.new_password = "newpassword123"
         cls.user = CustomUser.objects.create(email=cls.email)
         cls.user.set_password(cls.new_password)
         cls.user.save()
         OTP.objects.create(
             user=cls.user,
-            otp=cls.otp,
+            otp=cls.signed_otp,
             expiry_time=timezone.now() + timezone.timedelta(minutes=30),
         )
 
@@ -354,7 +356,7 @@ class VerifyOTPSerializerTestCase(APITestCase):
         serializer.save()
         self.user.refresh_from_db()
         self.assertTrue(self.user.check_password(self.new_password))
-        self.assertFalse(OTP.objects.get(otp=self.otp).is_valid)
+        self.assertFalse(OTP.objects.get(otp=self.signed_otp).is_active)
         # self.assertIsNotNone(Token.objects.get(user=self.user))
 
 
