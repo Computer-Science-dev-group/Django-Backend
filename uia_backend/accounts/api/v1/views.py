@@ -102,18 +102,15 @@ class VerifyOTPView(generics.GenericAPIView):
     """
 
     serializer_class = VerifyOTPSerializer
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request, format=None):
         serializer = self.serializer_class(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(
-                {"detail": "Password has been reset successfully."},
-                status=status.HTTP_200_OK,
-            )
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        return Response(data=serializer.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(
+            {"detail": "Password has been reset successfully."},
+            status=status.HTTP_200_OK,
+        )
 
 
 class UserProfileAPIView(generics.RetrieveUpdateAPIView):

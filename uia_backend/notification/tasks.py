@@ -10,7 +10,7 @@ Logger = logging.getLogger()
 @CELERY_APP.task(name="send_email_task")
 def send_template_email_task(
     recipients: list[str],
-    internal_tracker_ids: str,  # | list[str],
+    internal_tracker_ids: str | list[str],
     template_id: str,
     template_merge_data: dict[str, Any],
 ):

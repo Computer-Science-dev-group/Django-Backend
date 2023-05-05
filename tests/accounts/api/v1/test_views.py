@@ -152,16 +152,13 @@ class ForgotPasswordAPIViewTestCase(APITestCase):
         self.user = CustomUser.objects.create(
             email="test@example.com", password="testpassword"
         )
+        self.url = reverse("accounts_api_v1:forget_password")
+        self.data = {"email": self.user.email}
 
-    def test_post_with_valid_data(self):
-        url = reverse("accounts_api_v1:forget_password")
-        data = {"email": self.user.email}
-
-        @mock.patch("uia_backend.accounts.utils.send_user_forget_password_mail")
-        def test_forget_password_api(self, mock_send_mail):
-            response = self.client.post(url, data, format="json")
-            self.assertEqual(response.status_code, status.HTTP_200_OK)
-            mock_send_mail.assert_called_once(self.user, None, None)
+    def test_forget_password_api(self):
+        response = self.client.post(self.url, self.data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, {"detail": "OTP sent to email address."})
 
 
 class VerifyOTPViewTestCase(APITestCase):
@@ -212,7 +209,7 @@ class VerifyOTPViewTestCase(APITestCase):
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["email"]["message"]), "Invalid Email")
+        self.assertEqual(response.data, {"info": "Failure", "message": "Invalid Email"})
 
     def test_invalid_otp(self):
         """
@@ -221,7 +218,7 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"email": self.user.email, "otp": "4321", "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["message"][0]), "Invalid OTP")
+        self.assertEqual(response.data, {"info": "Failure", "message": "Invalid OTP"})
 
     def test_expired_otp(self):
         """
@@ -237,7 +234,9 @@ class VerifyOTPViewTestCase(APITestCase):
         }
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(str(response.data["message"][0]), "OTP has expired")
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "OTP has expired"}
+        )
 
     def test_missing_email_field(self):
         """
@@ -246,7 +245,9 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"otp": "123456", "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"email": ["This field is required."]})
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "This field is required."}
+        )
 
     def test_missing_otp_field(self):
         """
@@ -255,7 +256,9 @@ class VerifyOTPViewTestCase(APITestCase):
         data = {"email": self.user.email, "new_password": "newpassword"}
         response = self.client.post(self.url, data, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
-        self.assertEqual(response.data, {"otp": ["This field is required."]})
+        self.assertEqual(
+            response.data, {"info": "Failure", "message": "This field is required."}
+        )
 
     def test_post_with_invalid_serializer(self):
         data = {

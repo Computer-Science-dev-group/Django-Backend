@@ -9,7 +9,11 @@ from django.utils import timezone
 from rest_framework.request import Request
 
 from uia_backend.accounts import constants
-from uia_backend.accounts.models import CustomUser, EmailVerification
+from uia_backend.accounts.models import (
+    CustomUser,
+    EmailVerification,
+    PasswordEmailReset,
+)
 from uia_backend.notification.tasks import send_template_email_task
 
 Logger = logging.getLogger()
@@ -45,10 +49,10 @@ def send_user_registration_email_verification_mail(
     )
 
 
-def send_user_forget_password_mail(user, request: Request, otp) -> None:
+def send_user_forget_password_mail(user, request: Request, otp: str) -> None:
     """Send email to users to reset their email address using OTP."""
 
-    verification_record = EmailVerification.objects.create(
+    verification_record = PasswordEmailReset.objects.create(
         user=user,
         expiration_date=(
             timezone.now()

@@ -143,7 +143,7 @@ class ForgetPasswordSerializer(serializers.Serializer):
             raise serializers.ValidationError("Invalid Email")
         return email
 
-    def save(self):
+    def save(self) -> None:
         email = self.validated_data["email"]
         user = CustomUser.objects.get(email=email)
         otp = get_random_string(
@@ -155,6 +155,10 @@ class ForgetPasswordSerializer(serializers.Serializer):
         OTP.objects.create(user=user, otp=signed_otp, expiry_time=otp_expiry_time)
         send_user_forget_password_mail(user, request=self.context["request"], otp=otp)
 
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = "Password Reset OTP code sent to your email"
+        return StructureSerializer.to_representation(data=data)
+
 
 class VerifyOTPSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -164,10 +168,7 @@ class VerifyOTPSerializer(serializers.Serializer):
     def validate_email(self, email: str) -> str:
         user = CustomUser.objects.filter(email=email).first()
         if not user:
-            raise serializers.ValidationError(
-                {"message": "Invalid Email", "success": False, "data": [email]},
-                code="invalid",
-            )
+            raise serializers.ValidationError("Invalid Email")
         return email
 
     def validate(self, data: str) -> str:
@@ -183,38 +184,24 @@ class VerifyOTPSerializer(serializers.Serializer):
                 otp_obj.otp, max_age=timezone.timedelta(minutes=30)
             )
         except signing.SignatureExpired:
-            raise serializers.ValidationError(
-                {
-                    "message": "OTP has expired",
-                    "success": False,
-                    "data": [unsigned_otp],
-                },
-                code="invalid",
-            )
+            raise serializers.ValidationError("OTP has expired")
         if unsigned_otp != otp:
-            raise serializers.ValidationError(
-                {"message": "Invalid OTP", "success": False, "data": []},
-                code="invalid",
-            )
+            raise serializers.ValidationError("Invalid OTP")
         if timezone.now() > otp_obj.expiry_time + timezone.timedelta(minutes=30):
-            raise serializers.ValidationError(
-                {"message": "OTP has expired", "success": False, "data": []},
-                code="invalid",
-            )
+            raise serializers.ValidationError("OTP has expired")
         return data
 
-    def save(self):
+    def save(self) -> None:
         email = self.validated_data["email"]
         user = CustomUser.objects.get(email=email)
-        # otp = self.otp_obj.otp
         new_password = self.validated_data["new_password"]
         user.set_password(new_password)
         user.save()
 
         # Makes it unusable
         otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
-        # otp_obj = OTP.objects.get(otp=otp_obj.otp)
         otp_obj.is_active = False
+        otp_obj.save()
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
