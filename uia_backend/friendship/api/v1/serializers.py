@@ -5,6 +5,7 @@ from rest_framework import serializers
 from uia_backend.accounts.api.v1.serializers import UserRegistrationSerializer
 from uia_backend.friendship.models import FriendsRelationship
 from uia_backend.libs.default_serializer import StructureSerializer
+from uia_backend.accounts.models import CustomUser
 
 
 class FriendRequestSerializer(serializers.ModelSerializer):
@@ -13,29 +14,30 @@ class FriendRequestSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = FriendsRelationship
-        fields = ["sender", "receiver"]
+        fields = ["id","sender","receiver"]
 
-    def validate(self, data: dict[str, Any]):
-        sender = self.context["sender"]
-        receiver = self.context["receiver"]
-
-        if sender == receiver:
+    def validate(self, data):
+        data["receiver_id"] = self.context.get("receiver_id")
+        data["sender_id"] = self.context.get("sender_id")
+        
+        if data["receiver_id"] == data["sender_id"]:
             raise serializers.ValidationError(
                 "You can't send a friend request to yourself."
             )
-
+    
         return data
-
+    
+    
     def to_representation(self, instance: Any) -> Any:
-        data = "Friend request sent successfully."
-        return StructureSerializer.to_representation(data=data)
-
+        data = super().to_representation(instance)
+        return StructureSerializer.to_representation(data)
+    
 
 class AcceptFriendRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = FriendsRelationship
-        fields = ["sender", "receiver"]
-
+        fields = []
+    
     def to_representation(self, instance: Any) -> Any:
         data = "Friend request accepted successfully."
         return StructureSerializer.to_representation(data=data)

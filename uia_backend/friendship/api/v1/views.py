@@ -1,4 +1,6 @@
+from typing import Any
 from rest_framework import generics, permissions, status
+from rest_framework.request import Request
 from rest_framework.response import Response
 from rest_framework import response
 
@@ -16,28 +18,37 @@ from uia_backend.friendship.models import FriendsRelationship
 class SendFriendRequestView(generics.CreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = FriendRequestSerializer
-    queryset = FriendsRelationship.objects.all()
+    queryset = FriendsRelationship.objects.all() 
 
-    def create(self, request, receiver_id):
-        receiver_id = receiver_id
-        sender_id = request.user.id
-
-        context = {"sender": sender_id, "receiver": receiver_id}
-
-        serializer = FriendRequestSerializer(data=request.data, context=context)
-        receiver = CustomUser.objects.get(id=receiver_id)
-
+    def post(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        serializer = FriendRequestSerializer(data=request.data, context={
+            "receiver_id": kwargs["receiver_id"],
+            "sender_id": request.user.id
+        })
+        
         serializer.is_valid(raise_exception=True)
-        serializer.save(sender=request.user, receiver=receiver)
 
-        return Response(
-            {
-                "status": "success",
-                "details": f"Your friend request to {receiver.first_name} {receiver.last_name} has been sent",
-            },
-            status=status.HTTP_201_CREATED,
-        )
+        sender = CustomUser.objects.get(id = serializer.validated_data["receiver_id"])
+        receiver = CustomUser.objects.get(id = serializer.validated_data["sender_id"])
+        
+        if FriendsRelationship.objects.filter(sender=sender, receiver=receiver).exists():
+            return Response({
+                "info": "You have sent friend request alread"
+            })
+        
+        else:
+            friendship = FriendsRelationship.objects.create(
+            sender=sender, 
+            receiver=receiver, 
+            invite_status="accepted", 
+            is_friend=True
+            )
+       
+        return Response({"status": "success",
+                         "info": "friend request sent"
+                         }, status=status.HTTP_200_OK) 
 
+        
 
 class AcceptFriendRequestView(generics.UpdateAPIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -99,3 +110,4 @@ class BlockFriendView(generics.UpdateAPIView):
             },
             status=status.HTTP_200_OK,
         )
+
