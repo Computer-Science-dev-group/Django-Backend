@@ -205,8 +205,6 @@ class VerifyOTPSerializer(serializers.Serializer):
         user.save()
 
         # Makes it unusable
-        otp_obj = OTP.objects.get(otp=otp)
-        otp_obj.is_valid = False
         otp_obj = OTP.objects.filter(user=user).order_by("-expiry_time").first()
         otp_obj.is_active = False
         otp_obj.save()

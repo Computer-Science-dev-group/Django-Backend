@@ -9,12 +9,12 @@ from tests.accounts.test_models import (
     OTPFactory,
     UserModelFactory,
 )
-from uia_backend.accounts import constants
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     ForgetPasswordSerializer,
     LoginSerializer,
+    UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyOTPSerializer,
 )
@@ -154,127 +154,6 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
         ]
 
 
-class ForgetPasswordSerializerTestCase(APITestCase):
-    def setUp(self):
-        self.user = CustomUser.objects.create(
-            email="test@example.com",
-            password="testpassword",
-        )
-        self.serializer = ForgetPasswordSerializer()
-        self.serializer_class = ForgetPasswordSerializer
-
-    def test_validate_email_with_valid_email(self):
-        email = "test@example.com"
-        result = self.serializer.validate_email(email)
-        self.assertEqual(result, email)
-
-    def test_validate_email_with_invalid_email(self):
-        email = "invalidemail"
-        with self.assertRaises(serializers.ValidationError):
-            self.serializer.validate_email(email)
-
-    def test_save(self):
-        email = "test@example.com"
-        serializer_data = {"email": email}
-        self.serializer = self.serializer_class(
-            data=serializer_data, context={"request": None}
-        )
-        self.serializer.is_valid()
-
-        @patch("uia_backend.accounts.utils.send_user_forget_password_mail")
-        def test_forget_password_serializer(self, mock_send_mail):
-            self.serializer.save()
-            otp = OTP.objects.get(user=self.user)
-            self.assertEqual(otp.user, self.user)
-            self.assertEqual(
-                otp.expiry_time.minute,
-                (timezone.now() + timezone.timedelta(minutes=30)).minute,
-            )
-            mock_send_mail.assert_called_once_with(self.user, None, otp=otp.otp)
-
-
-class VerifyOTPSerializerTestCase(APITestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.email = "test@example.com"
-        cls.otp = "1234"
-        cls.signer = signing.TimestampSigner()
-        cls.signed_otp = cls.signer.sign(cls.otp)
-        cls.new_password = "newpassword123"
-        cls.user = CustomUser.objects.create(email=cls.email)
-        cls.user.set_password(cls.new_password)
-        cls.user.save()
-        OTP.objects.create(
-            user=cls.user,
-            otp=cls.signed_otp,
-            expiry_time=timezone.now() + timezone.timedelta(minutes=30),
-        )
-
-    @classmethod
-    def tearDownClass(cls):
-        super().tearDownClass()
-        CustomUser.objects.filter(email=cls.email).delete()
-        OTP.objects.filter(user=cls.user).delete()
-
-    def test_validate_email(self):
-        serializer = VerifyOTPSerializer(
-            data={
-                "email": self.email,
-                "otp": self.otp,
-                "new_password": self.new_password,
-            }
-        )
-        self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.validated_data["email"], self.email)
-
-    def test_validate_email_invalid(self):
-        serializer = VerifyOTPSerializer(data={"email": "invalid@example.com"})
-        with self.assertRaises(ValidationError):
-            serializer.is_valid(raise_exception=True)
-
-    def test_validate(self):
-        serializer = VerifyOTPSerializer(
-            data={
-                "email": self.email,
-                "otp": self.otp,
-                "new_password": self.new_password,
-            }
-        )
-        self.assertTrue(serializer.is_valid())
-        self.assertEqual(serializer.validated_data["email"], self.email)
-        self.assertEqual(serializer.validated_data["otp"], self.otp)
-
-    def test_validate_invalid_otp(self):
-        serializer = VerifyOTPSerializer(data={"email": self.email, "otp": "6543"})
-        with self.assertRaises(ValidationError):
-            serializer.is_valid(raise_exception=True)
-
-    def test_validate_expired_otp(self):
-        with patch("django.utils.timezone.now") as mock_now:
-            mock_now.return_value = OTP.objects.get(
-                user=self.user
-            ).expiry_time + timezone.timedelta(seconds=1)
-            serializer = VerifyOTPSerializer(
-                data={"email": self.email, "otp": self.otp}
-            )
-            with self.assertRaises(ValidationError):
-                serializer.is_valid(raise_exception=True)
-
-    def test_save(self):
-        serializer = VerifyOTPSerializer(
-            data={
-                "email": self.email,
-                "otp": self.otp,
-                "new_password": self.new_password,
-            }
-        )
-        self.assertTrue(serializer.is_valid())
-        serializer.save()
-        self.user.refresh_from_db()
-        self.assertTrue(self.user.check_password(self.new_password))
-        self.assertFalse(OTP.objects.get(otp=self.signed_otp).is_active)
-        # self.assertIsNotNone(Token.objects.get(user=self.user))
 class UserProfileSerializerTests(CustomSerializerTests):
     __test__ = True
 
@@ -372,6 +251,7 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
             "context": None,
         }
     ]
+
     INVALID_DATA = [
         {
             "data": {"password": "string"},
@@ -495,8 +375,7 @@ class VerifyOTPSerializerTests(CustomSerializerTests):
         self.otp = OTPFactory.create(
             user=self.user,
             otp=self.signed_otp,
-            expiry_time=timezone.now()
-            + timezone.timedelta(minutes=constants.OTP_MINUTES_EXPIRY_TIME),
+            expiry_time=timezone.now() + timezone.timedelta(minutes=30),
         )
 
         self.invalid_otp = OTPFactory.create(
