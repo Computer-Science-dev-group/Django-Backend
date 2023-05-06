@@ -46,7 +46,7 @@ class AcceptFriendRequestSerializer(serializers.ModelSerializer):
 class RejectFriendRequestSerializer(serializers.ModelSerializer):
     class Meta:
         model = FriendsRelationship
-        fields = ["sender", "receiver"]
+        fields = []
 
     def to_representation(self, instance: Any) -> Any:
         data = "Friend request rejected successfully."
@@ -56,7 +56,7 @@ class RejectFriendRequestSerializer(serializers.ModelSerializer):
 class BlockFriendSerializer(serializers.ModelSerializer):
     class Meta:
         model = FriendsRelationship
-        fields = ["sender", "receiver"]
+        fields = []
 
     def to_representation(self, instance: Any) -> Any:
         data = "Friend blocked successfully."
