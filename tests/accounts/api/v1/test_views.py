@@ -10,6 +10,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
 from uia_backend.accounts.models import CustomUser
+from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
 
 
 class UserRegistrationAPIViewTests(APITestCase):
@@ -37,8 +38,9 @@ class UserRegistrationAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 201)
 
         expected_response_data = {
-            "info": "Success",
-            "message": {
+            "status": "Success",
+            "code": 201,
+            "data": {
                 "first_name": "John",
                 "last_name": "Doe",
                 "email": "johndoe@example.com",
@@ -48,7 +50,7 @@ class UserRegistrationAPIViewTests(APITestCase):
             },
         }
 
-        self.assertDictEqual(expected_response_data, response.data)
+        self.assertDictEqual(expected_response_data, response.json())
 
         user = CustomUser.objects.filter(
             email=user_data["email"], is_active=False
@@ -68,7 +70,7 @@ class UserRegistrationAPIViewTests(APITestCase):
             "first_name": "John",
             "last_name": "Doe",
             "email": user.email,
-            "password": "password123",
+            "password": "asasi'jidjdj;osd",
             "faculty": "Engineering",
             "department": "Computer Science",
             "year_of_graduation": "2022",
@@ -77,11 +79,14 @@ class UserRegistrationAPIViewTests(APITestCase):
         response = self.client.post(path=self.url, data=user_data)
 
         expected_response_data = {
-            "info": "Failure",
-            "message": "custom user with this email address already exists.",
+            "status": "Error",
+            "code": 400,
+            "data": {
+                "email": ["custom user with this email address already exists."],
+            },
         }
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.data, expected_response_data)
+        self.assertEqual(response.json(), expected_response_data)
 
 
 class EmailVerificationAPIViewTests(APITestCase):
@@ -112,11 +117,69 @@ class EmailVerificationAPIViewTests(APITestCase):
         self.assertFalse(self.email_verification.is_active)
 
         self.assertDictEqual(
-            response.data,
+            response.json(),
             {
-                "info": "Success",
-                "message": "Your account has been successfully verified.",
+                "status": "Success",
+                "code": 200,
+                "data": {"message": "Your account has been successfully verified."},
             },
+        )
+
+    def test__add_user_to_defualt_clusters_on_successful_email_verification(self):
+        """Test to ensure that user is added to default clusters on email verification."""
+        response = self.client.get(path=self.url)
+        # TEST
+
+        # Show that verification was sucessful
+        self.assertEqual(response.status_code, 200)
+
+        # Show that user was has been added to all default clusters
+        self.assertEqual(InternalCluster.objects.all().count(), 4)
+        self.assertEqual(Cluster.objects.all().count(), 4)
+        self.assertEqual(ClusterMembership.objects.filter(user=self.user).count(), 4)
+
+        global_cluster = InternalCluster.objects.filter(
+            name="global", description=""
+        ).first()
+        self.assertIsNotNone(global_cluster)
+        self.assertIsNotNone(global_cluster.cluster)
+        self.assertTrue(
+            ClusterMembership.objects.filter(
+                user=self.user, cluster=global_cluster.cluster
+            ).exists()
+        )
+
+        faculty_cluster = InternalCluster.objects.filter(
+            name=f"faculty of {self.user.faculty}", description=""
+        ).first()
+        self.assertIsNotNone(faculty_cluster)
+        self.assertIsNotNone(faculty_cluster.cluster)
+        self.assertTrue(
+            ClusterMembership.objects.filter(
+                user=self.user, cluster=faculty_cluster.cluster
+            ).exists()
+        )
+
+        department_cluster = InternalCluster.objects.filter(
+            name=f"{self.user.department} department", description=""
+        ).first()
+        self.assertIsNotNone(department_cluster)
+        self.assertIsNotNone(department_cluster.cluster)
+        self.assertTrue(
+            ClusterMembership.objects.filter(
+                user=self.user, cluster=department_cluster.cluster
+            ).exists()
+        )
+
+        yog_cluster = InternalCluster.objects.filter(
+            name=f"{self.user.year_of_graduation} set", description=""
+        ).first()
+        self.assertIsNotNone(yog_cluster)
+        self.assertIsNotNone(yog_cluster.cluster)
+        self.assertTrue(
+            ClusterMembership.objects.filter(
+                user=self.user, cluster=yog_cluster.cluster
+            ).exists()
         )
 
     def test_email_verification_failed_invalid_signature(self):
@@ -136,10 +199,11 @@ class EmailVerificationAPIViewTests(APITestCase):
         self.assertTrue(self.email_verification.is_active)
 
         self.assertDictEqual(
-            response.data,
+            response.json(),
             {
-                "info": "Failure",
-                "message": "Invalid link or link has expired.",
+                "status": "Error",
+                "code": 400,
+                "data": {"non_field_errors": ["Invalid link or link has expired."]},
             },
         )
 
@@ -162,7 +226,7 @@ class UserProfileAPIViewTests(APITestCase):
         response = self.client.get(self.url, args=[self.user.id])
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
-            dict(response.data["message"]),
+            dict(response.json()["data"]),
             {
                 "first_name": self.user.first_name,
                 "last_name": self.user.last_name,
@@ -175,7 +239,7 @@ class UserProfileAPIViewTests(APITestCase):
                 "gender": self.user.gender,
                 "display_name": self.user.display_name,
                 "phone_number": self.user.phone_number,
-                "date_of_birth": None,
+                "date_of_birth": self.user.date_of_birth.isoformat(),
             },
         )
 
@@ -202,7 +266,7 @@ class UserProfileAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 200)
 
         self.assertDictEqual(
-            dict(response.data["message"]),
+            response.json()["data"],
             {
                 "first_name": user_data["first_name"],
                 "last_name": user_data["last_name"],
@@ -212,7 +276,7 @@ class UserProfileAPIViewTests(APITestCase):
                 "gender": user_data["gender"],
                 "display_name": user_data["display_name"],
                 "phone_number": user_data["phone_number"],
-                "date_of_birth": None,
+                "date_of_birth": self.user.date_of_birth.isoformat(),
                 "cover_photo": None,
                 "profile_picture": None,
                 "year_of_graduation": user_data["year_of_graduation"],
@@ -240,10 +304,11 @@ class UserProfileAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 401)
 
         self.assertDictEqual(
-            response.data,
+            response.json(),
             {
-                "info": "Failure",
-                "message": "Authentication credentials were not provided.",
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
             },
         )
 
@@ -254,8 +319,8 @@ class ChangePasswordAPIViewTests(APITestCase):
         self.url = reverse("accounts_api_v1:change_password")
         self.auth_headers = f"Bearer {AccessToken.for_user(self.user)}"
 
-    @mock.patch("uia_backend.notification.tasks.send_template_email_task.delay")
     @responses.activate
+    @mock.patch("uia_backend.notification.tasks.send_template_email_task.delay")
     def test_change_password_authenticated_user_successful(self, mock_send_email_task):
         """Test change password successful for authenticated user."""
 
@@ -280,8 +345,12 @@ class ChangePasswordAPIViewTests(APITestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
-            response.data,
-            {"info": "Success", "message": "Password Changed Successfully."},
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {"message": "Password Changed Successfully."},
+            },
         )
         mock_send_email_task.assert_called_once()
 
@@ -294,10 +363,11 @@ class ChangePasswordAPIViewTests(APITestCase):
 
         self.assertEqual(response.status_code, 401)
         self.assertDictEqual(
-            response.data,
+            response.json(),
             {
-                "info": "Failure",
-                "message": "Authentication credentials were not provided.",
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
             },
         )
 
@@ -336,9 +406,13 @@ class LoginAPIViewTests(APITestCase):
 
         jwt_token_mock.assert_called_once()
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(
-            response.data,
-            {"info": "Success", "message": {"auth_token": "jwt-token-asasasas"}},
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {"auth_token": "jwt-token-asasasas"},
+            },
         )
 
     def test_invalid_credentials_email(self):
@@ -348,11 +422,16 @@ class LoginAPIViewTests(APITestCase):
         response = self.client.post(data=valid_data, path=self.url)
 
         self.assertEqual(response.status_code, 400)
-        self.assertTrue(
-            response.data,
+        self.assertEqual(
+            response.json(),
             {
-                "info": "Success",
-                "message": "Invalid credentials or your account is inactive.",
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
         )
 
@@ -363,11 +442,16 @@ class LoginAPIViewTests(APITestCase):
         response = self.client.post(data=valid_data, path=self.url)
 
         self.assertEqual(response.status_code, 400)
-        self.assertTrue(
-            response.data,
+        self.assertEqual(
+            response.json(),
             {
-                "info": "Success",
-                "message": "Invalid credentials or your account is inactive.",
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
         )
 
@@ -381,10 +465,15 @@ class LoginAPIViewTests(APITestCase):
         response = self.client.post(data=valid_data, path=self.url)
 
         self.assertEqual(response.status_code, 400)
-        self.assertTrue(
-            response.data,
+        self.assertEqual(
+            response.json(),
             {
-                "info": "Success",
-                "message": "Invalid credentials or your account is inactive.",
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
         )

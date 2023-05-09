@@ -11,6 +11,13 @@ urlpatterns = [
             namespace="accounts_api_v1",
         ),
     ),
+    path(
+        "api/v1/clusters/",
+        include(
+            ("uia_backend.cluster.api.v1.urls", "cluster_api_v1"),
+            namespace="cluster_api_v1",
+        ),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS

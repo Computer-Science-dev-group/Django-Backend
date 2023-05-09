@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.utils import timezone
 from factory.django import DjangoModelFactory
 
 from uia_backend.accounts.models import (
@@ -18,6 +19,7 @@ class UserModelFactory(DjangoModelFactory):
     department = "Computer Science"
     year_of_graduation = "2019"
     password = "f_g68Ata7jPqqmm"
+    date_of_birth = timezone.now().date()
 
     class Meta:
         model = CustomUser

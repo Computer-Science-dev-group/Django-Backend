@@ -15,7 +15,7 @@ from uia_backend.accounts.utils import (
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
 )
-from uia_backend.libs.default_serializer import StructureSerializer
+from uia_backend.cluster.utils import ClusterManager
 
 logger = logging.getLogger()
 
@@ -78,10 +78,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         )
         return user
 
-    def to_representation(self, instance: Any) -> Any:
-        data = super().to_representation(instance)
-        return StructureSerializer.to_representation(data)
-
 
 class EmailVerificationSerializer(serializers.ModelSerializer):
     signature = serializers.CharField(
@@ -103,6 +99,8 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
         instance.user.is_active = True
         instance.user.save(update_fields=["is_active"])
         instance.save(update_fields=["is_active"])
+        manager = ClusterManager(user=instance.user)
+        manager.add_user_to_defualt_clusters()
         return instance
 
     def validate(self, attrs: dict[str, Any]) -> EmailVerification:
@@ -128,8 +126,7 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Invalid link or link has expired.")
 
     def to_representation(self, instance: Any) -> Any:
-        data = "Your account has been successfully verified."
-        return StructureSerializer.to_representation(data=data)
+        return {"message": "Your account has been successfully verified."}
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
@@ -162,12 +159,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
-
         return instance
-
-    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
-        data = super().to_representation(instance)
-        return StructureSerializer.to_representation(data=data)
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
@@ -201,8 +193,7 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         return instance
 
     def to_representation(self, instance: CustomUser) -> dict[str, Any]:
-        data = "Password Changed Successfully."
-        return StructureSerializer.to_representation(data=data)
+        return {"message": "Password Changed Successfully."}
 
 
 class LoginSerializer(serializers.Serializer):
@@ -220,9 +211,9 @@ class LoginSerializer(serializers.Serializer):
             data["user"] = user
             return data
         raise serializers.ValidationError(
-            "Invalid credentials or your accoun is inactive."
+            "Invalid credentials or your account is inactive."
         )
 
     def to_representation(self, instance: dict[str, Any]) -> dict[str, Any]:
         data = {"auth_token": str(AccessToken.for_user(user=instance["user"]))}
-        return StructureSerializer.to_representation(data=data)
+        return data

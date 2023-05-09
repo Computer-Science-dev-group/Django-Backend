@@ -72,12 +72,14 @@ THIRD_PARTY_APPS = [
     "drf_spectacular",
     "drf_standardized_errors",
     "rest_framework_simplejwt",
+    "guardian",
 ]
 
 LOCAL_APPS = [
     # Your stuff: custom apps go here
     "uia_backend.accounts",
     "uia_backend.notification",
+    "uia_backend.cluster",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -87,6 +89,7 @@ INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 # https://docs.djangoproject.com/en/dev/ref/settings/#authentication-backends
 AUTHENTICATION_BACKENDS = [
     "django.contrib.auth.backends.ModelBackend",
+    "guardian.backends.ObjectPermissionBackend",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#auth-user-model
 AUTH_USER_MODEL = "accounts.CustomUser"
@@ -285,8 +288,11 @@ REST_FRAMEWORK = {
     ),
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-    "EXCEPTION_HANDLER": "drf_standardized_errors.handler.exception_handler",
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "DEFAULT_RENDERER_CLASSES": [
+        "uia_backend.libs.renderers.CustomRenderer",
+        "rest_framework.renderers.JSONRenderer",
+    ],
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
@@ -313,3 +319,10 @@ SIMPLE_JWT = {
 # Your stuff...
 # ------------------------------------------------------------------------------
 IP_API_CO_URL = "https://ipapi.co"  # https://ipapi.co/api/
+
+DEFUALT_CLUSTER_NAMES = {
+    0: "global",
+    1: "faculty of {faculty_name}",
+    3: "{department_name} department",
+    4: "{year_of_graduation} set",
+}
