@@ -7,8 +7,12 @@ class EmailMessageModel(BaseAbstractModel):
     """A model to represent an email message sent to a user."""
 
     ESP_TYPE_SENDINBLUE = 0
+    ESP_TYPE_SENDGRID = 1
 
-    ESP_TYPE_CHOICES = ((ESP_TYPE_SENDINBLUE, "SendInBlue"),)
+    ESP_TYPE_CHOICES = (
+        (ESP_TYPE_SENDINBLUE, "SendInBlue"),
+        (ESP_TYPE_SENDGRID, "SendGrid"),
+    )
 
     EMAIL_MESSAGE_STATUS_PENDING = 0
     EMAIL_MESSAGE_STATUS_SENT = 1

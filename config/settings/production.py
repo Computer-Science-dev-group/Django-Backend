@@ -123,8 +123,18 @@ INSTALLED_APPS += ["anymail"]  # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
 # https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
 # https://anymail.readthedocs.io/en/stable/esps/amazon_ses/
-EMAIL_BACKEND = "anymail.backends.amazon_ses.EmailBackend"
-ANYMAIL = {}
+EMAIL_BACKEND = env(
+    "DJANGO_EMAIL_BACKEND",
+    default="anymail.backends.sendgrid.EmailBackend",
+)
+
+
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": env("SENDINBLUE_API_KEY", default=""),
+    "SENDGRID_API_KEY": env("SENDGRID_API_KEY", default=""),
+    "WEBHOOK_SECRET": env("ANYMAIL_WEBHOOK_SECRET", default=""),
+    "SENDGRID_MERGE_FIELD_FORMAT": "{{{{{}}}}}",
+}
 
 
 # LOGGING
@@ -192,7 +202,7 @@ sentry_sdk.init(
 # -------------------------------------------------------------------------------
 # Tools that generate code samples can use SERVERS to point to the correct domain
 SPECTACULAR_SETTINGS["SERVERS"] = [  # noqa F405
-    {"url": "https://example.com", "description": "Production server"}
+    {"url": "https://staging.uiaapp.click/", "description": "Production server"}
 ]
 # Your stuff...
 # ------------------------------------------------------------------------------
