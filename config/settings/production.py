@@ -18,7 +18,17 @@ ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["example.com"])
 
 # DATABASES
 # ------------------------------------------------------------------------------
-DATABASES["default"]["CONN_MAX_AGE"] = env.int("CONN_MAX_AGE", default=60)  # noqa F405
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.postgresql_psycopg2",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT"),
+        "CONN_MAX_AGE": env.int("CONN_MAX_AGE", default=60),
+    },
+}
 
 # CACHES
 # ------------------------------------------------------------------------------
@@ -115,26 +125,6 @@ EMAIL_SUBJECT_PREFIX = env(
 # ------------------------------------------------------------------------------
 # Django Admin URL regex.
 ADMIN_URL = env("DJANGO_ADMIN_URL")
-
-# Anymail
-# ------------------------------------------------------------------------------
-# https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
-INSTALLED_APPS += ["anymail"]  # noqa F405
-# https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
-# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
-# https://anymail.readthedocs.io/en/stable/esps/amazon_ses/
-EMAIL_BACKEND = env(
-    "DJANGO_EMAIL_BACKEND",
-    default="anymail.backends.sendgrid.EmailBackend",
-)
-
-
-ANYMAIL = {
-    "SENDINBLUE_API_KEY": env("SENDINBLUE_API_KEY", default=""),
-    "SENDGRID_API_KEY": env("SENDGRID_API_KEY", default=""),
-    "WEBHOOK_SECRET": env("ANYMAIL_WEBHOOK_SECRET", default=""),
-    "SENDGRID_MERGE_FIELD_FORMAT": "{{{{{}}}}}",
-}
 
 
 # LOGGING

@@ -10,9 +10,13 @@ from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     LoginSerializer,
+    ResetPasswordSerializer,
+    RestPasswordRequestSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    VerifyResetPasswordOTPSerializer,
 )
+from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
 
 
 class UserRegistrationAPIView(generics.CreateAPIView):
@@ -152,3 +156,38 @@ class LoginAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         # NOTE: we can send a task here to store login attempt
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ResetPasswordRequestAPIView(generics.CreateAPIView):
+    serializer_class = RestPasswordRequestSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [PasswordRestThrottle]
+
+
+class VerifyResetPasswordAPIView(generics.GenericAPIView):
+    """View for verifying a password reset attempt using an OTP."""
+
+    serializer_class = VerifyResetPasswordOTPSerializer
+    permission_classes = [permissions.AllowAny]
+    http_method_names = ["post"]
+
+    def post(self, request: Request) -> Response:
+        """Verify password view."""
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class ResetPasswordAPIView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+    permission_classes = [permissions.AllowAny]
+    http_method_names = ["post"]
+
+    def post(self, request: Request) -> Response:
+        """Reset password view."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)

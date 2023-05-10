@@ -201,13 +201,24 @@ SECURE_BROWSER_XSS_FILTER = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#x-frame-options
 X_FRAME_OPTIONS = "DENY"
 
-# EMAIL
+# Anymail
 # ------------------------------------------------------------------------------
+# https://anymail.readthedocs.io/en/stable/installation/#installing-anymail
+INSTALLED_APPS += ["anymail"]  # noqa F405
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-backend
+# https://anymail.readthedocs.io/en/stable/installation/#anymail-settings-reference
+# https://anymail.readthedocs.io/en/stable/esps/amazon_ses/
 EMAIL_BACKEND = env(
     "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.smtp.EmailBackend",
+    default="anymail.backends.sendgrid.EmailBackend",
 )
+
+ANYMAIL = {
+    "SENDINBLUE_API_KEY": env("SENDINBLUE_API_KEY", default=""),
+    "SENDGRID_API_KEY": env("SENDGRID_API_KEY", default=""),
+    "WEBHOOK_SECRET": env("ANYMAIL_WEBHOOK_SECRET", default=""),
+    "SENDGRID_MERGE_FIELD_FORMAT": "{{{{{}}}}}",
+}
 
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-timeout
 EMAIL_TIMEOUT = 5
