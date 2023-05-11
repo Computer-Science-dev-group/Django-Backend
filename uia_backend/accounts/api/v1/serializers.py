@@ -10,7 +10,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
 
 from uia_backend.accounts import constants
-from uia_backend.accounts.models import CustomUser, EmailVerification
+from uia_backend.accounts.models import CustomUser, EmailVerification, Follows
 from uia_backend.accounts.utils import (
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
@@ -161,8 +161,21 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'first_name', 'last_name']
 
-class ChangePasswordSerializer(serializers.ModelSerializer):
+
+class FollowsSerializer(serializers.ModelSerializer):
+    user_from = CustomUserSerializer(read_only=True)
+    user_to = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Follows
+        fields = ['user_from', 'user_to', 'created']_
+object()
+sclas ChangePasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ["password"]
