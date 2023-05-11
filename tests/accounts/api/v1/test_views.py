@@ -1,3 +1,4 @@
+from datetime import timedelta
 from unittest import mock
 
 import responses
@@ -8,8 +9,16 @@ from django.utils import timezone
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
-from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
-from uia_backend.accounts.models import CustomUser
+from tests.accounts.test_models import (
+    EmailVerificationFactory,
+    PasswordResetAttemptFactory,
+    UserModelFactory,
+)
+from uia_backend.accounts.constants import (
+    PASSWORD_RESET_ACTIVE_PERIOD,
+    PASSWORD_RESET_TEMPLATE_ID,
+)
+from uia_backend.accounts.models import CustomUser, PasswordResetAttempt
 from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
 
 
@@ -476,4 +485,370 @@ class LoginAPIViewTests(APITestCase):
                     ]
                 },
             },
+        )
+
+
+class ResetPasswordRequestAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.url = reverse("accounts_api_v1:request_password_reset_otp")
+
+    @mock.patch(
+        "uia_backend.accounts.api.v1.views.PasswordRestThrottle.allow_request",
+        side_effect=[True],
+    )
+    @mock.patch("uia_backend.accounts.utils.send_template_email_task")
+    def test_valid_email_provided(self, mock_send_email_task, mock_throttle):
+        """Test that a valid email address is provided and OTP is successfully sent."""
+
+        with mock.patch(
+            "uia_backend.accounts.api.v1.serializers.generate_reset_password_otp",
+            side_effect=[("000000", "")],
+        ):
+            response = self.client.post(self.url, {"email": self.user.email})
+
+        self.assertEqual(response.status_code, 201)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {"message": "OTP has been sent to this email address."},
+            },
+        )
+        self.assertTrue(
+            PasswordResetAttempt.objects.filter(
+                user=self.user, status=PasswordResetAttempt.STATUS_PENDING
+            ).exists()
+        )
+
+        reset_record = PasswordResetAttempt.objects.filter(
+            user=self.user, status=PasswordResetAttempt.STATUS_PENDING
+        ).first()
+
+        mock_send_email_task.assert_called_once_with(
+            recipients=[self.user.email],
+            internal_tracker_ids=[str(reset_record.internal_tracker_id)],
+            template_id=PASSWORD_RESET_TEMPLATE_ID,
+            template_merge_data={
+                self.user.email: {
+                    "otp": "000000",
+                    "expiration_in_minutes": PASSWORD_RESET_ACTIVE_PERIOD,
+                },
+            },
+        )
+
+    @mock.patch(
+        "uia_backend.accounts.api.v1.views.PasswordRestThrottle.allow_request",
+        side_effect=[True],
+    )
+    def test_invalid_email_provided(self, mock_throttle):
+        """Test that an invalid email address is provided and appropriate error message is returned."""
+        email = "unkwown"
+
+        response = self.client.post(self.url, {"email": email})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"email": ["Enter a valid email address."]},
+            },
+        )
+        self.assertFalse(
+            PasswordResetAttempt.objects.filter(
+                user=self.user, status=PasswordResetAttempt.STATUS_PENDING
+            ).exists()
+        )
+
+    @mock.patch(
+        "uia_backend.accounts.api.v1.views.PasswordRestThrottle.allow_request",
+        side_effect=[True],
+    )
+    def test_inactive_user_email_provided(self, mock_throttle):
+        """Test that an email address of an inactive user is provided and appropriate error message is returned."""
+        user = CustomUser.objects.create(email="test@example.com", is_active=False)
+        response = self.client.post(self.url, {"email": user.email})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "email": [
+                        "Invalid email address. No active user with this credentials was found."
+                    ]
+                },
+            },
+        )
+        self.assertFalse(
+            PasswordResetAttempt.objects.filter(
+                user=self.user, status=PasswordResetAttempt.STATUS_PENDING
+            ).exists()
+        )
+
+
+class VerifyResetPasswordAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.otp = "000000"
+        self.reset_record = PasswordResetAttemptFactory.create(
+            status=PasswordResetAttempt.STATUS_PENDING,
+            signed_otp=signing.Signer().sign(self.otp),
+            expiration_datetime=timezone.now() + timedelta(hours=2),
+            user=self.user,
+        )
+        self.url = reverse("accounts_api_v1:verify_password_reset_otp")
+
+    def test_verify_otp_successfully(self):
+        """Test verifying otp is successful."""
+
+        request_data = {"otp": self.otp, "email": self.user.email}
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "password_change_key": self.reset_record.generate_signed_identifier()
+                },
+            },
+        )
+
+        self.reset_record.refresh_from_db()
+        self.assertEqual(
+            self.reset_record.status, PasswordResetAttempt.STATUS_OTP_VERIFIED
+        )
+
+    def test_verify_otp_fails_when_otp_is_invaild(self):
+        """Test that view fails when otp is invalid."""
+
+        request_data = {"otp": "111111", "email": self.user.email}
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"otp": ["Invalid otp or otp has expired."]},
+            },
+        )
+
+        self.reset_record.refresh_from_db()
+        self.assertEqual(self.reset_record.status, PasswordResetAttempt.STATUS_PENDING)
+
+    def test_verify_otp_fails_when_reset_record_status_is_not_pending(self):
+        """Test that view fails when PasswordResetAttempt status is not pending."""
+
+        self.reset_record.status = PasswordResetAttempt.STATUS_EXPIRED
+        self.reset_record.save()
+
+        request_data = {"otp": self.otp, "email": self.user.email}
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"otp": ["Invalid otp or otp has expired."]},
+            },
+        )
+
+        self.reset_record.refresh_from_db()
+        self.assertEqual(self.reset_record.status, PasswordResetAttempt.STATUS_EXPIRED)
+
+    def test_verify_otp_fails_when_reset_record_has_expired(self):
+        """Test that view fails when PasswordResetAttempt has expired."""
+
+        self.reset_record.expiration_datetime = timezone.now() - timedelta(minutes=1)
+        self.reset_record.save()
+
+        request_data = {"otp": self.otp, "email": self.user.email}
+        response = self.client.post(path=self.url, data=request_data)
+
+        request_data = {"otp": self.otp, "email": self.user.email}
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"otp": ["Invalid otp or otp has expired."]},
+            },
+        )
+
+        self.reset_record.refresh_from_db()
+        self.assertEqual(self.reset_record.status, PasswordResetAttempt.STATUS_PENDING)
+
+
+class ResetPasswordAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.otp = "000000"
+        self.reset_record = PasswordResetAttemptFactory.create(
+            status=PasswordResetAttempt.STATUS_OTP_VERIFIED,
+            signed_otp=signing.Signer().sign(self.otp),
+            expiration_datetime=timezone.now() + timedelta(hours=2),
+            user=self.user,
+        )
+        self.url = reverse("accounts_api_v1:reset_password")
+
+    def test_reset_password_successfully(self):
+        """Test that view allows user to change password successfuly."""
+
+        self.user.set_password("string")
+        self.user.save()
+
+        request_data = {
+            "password_change_key": self.reset_record.generate_signed_identifier(),
+            "new_password": "f_g68Ata7jPqqmm",
+            "email": self.user.email,
+        }
+
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {"message": "Password Reset Successfully."},
+            },
+        )
+
+        self.user.refresh_from_db()
+        self.reset_record.refresh_from_db()
+        self.assertTrue(self.user.check_password("f_g68Ata7jPqqmm"))
+        self.assertEqual(self.reset_record.status, PasswordResetAttempt.STATUS_SUCCESS)
+
+    def test_reset_password_fails_when_new_password_is_weak(self):
+        self.user.set_password("string")
+        self.user.save()
+
+        request_data = {
+            "password_change_key": self.reset_record.generate_signed_identifier(),
+            "new_password": "password",
+            "email": self.user.email,
+        }
+
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"new_password": ["['This password is too common.']"]},
+            },
+        )
+
+        self.user.refresh_from_db()
+        self.reset_record.refresh_from_db()
+
+        self.assertFalse(self.user.check_password("password"))
+        self.assertTrue(self.user.check_password("string"))
+
+        self.assertEqual(
+            self.reset_record.status, PasswordResetAttempt.STATUS_OTP_VERIFIED
+        )
+
+    def test_reset_password_fails_when_otp_has_expired(self):
+        self.user.set_password("string")
+        self.reset_record.expiration_datetime = timezone.now() - timedelta(minutes=1)
+        self.reset_record.save()
+        self.user.save()
+
+        request_data = {
+            "password_change_key": self.reset_record.generate_signed_identifier(),
+            "new_password": "f_g68Ata7jPqqmm",
+            "email": self.user.email,
+        }
+
+        response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "password_change_key": [
+                        (
+                            "Invalid password_change_key or session has expired. "
+                            "Please restart process."
+                        )
+                    ]
+                },
+            },
+        )
+
+        self.user.refresh_from_db()
+        self.reset_record.refresh_from_db()
+
+        self.assertFalse(self.user.check_password("password"))
+        self.assertTrue(self.user.check_password("string"))
+
+        self.assertEqual(
+            self.reset_record.status, PasswordResetAttempt.STATUS_OTP_VERIFIED
+        )
+
+    def test_reset_password_fails_when_password_change_key_has_expired(self):
+        self.user.set_password("string")
+        self.user.save()
+
+        request_data = {
+            "password_change_key": self.reset_record.generate_signed_identifier(),
+            "new_password": "f_g68Ata7jPqqmm",
+            "email": self.user.email,
+        }
+
+        with mock.patch(
+            "uia_backend.accounts.models.signing.TimestampSigner.unsign",
+            side_effect=[signing.BadSignature],
+        ):
+            response = self.client.post(path=self.url, data=request_data)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "password_change_key": [
+                        (
+                            "Invalid password_change_key or session has expired. "
+                            "Please restart process."
+                        )
+                    ]
+                },
+            },
+        )
+
+        self.user.refresh_from_db()
+        self.reset_record.refresh_from_db()
+
+        self.assertFalse(self.user.check_password("password"))
+        self.assertTrue(self.user.check_password("string"))
+
+        self.assertEqual(
+            self.reset_record.status, PasswordResetAttempt.STATUS_OTP_VERIFIED
         )

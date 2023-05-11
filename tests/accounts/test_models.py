@@ -5,6 +5,7 @@ from factory.django import DjangoModelFactory
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    PasswordResetAttempt,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -75,3 +76,8 @@ class UserCoverProfileUploadLocation(TestCase):
 class EmailVerificationFactory(DjangoModelFactory):
     class Meta:
         model = EmailVerification
+
+
+class PasswordResetAttemptFactory(DjangoModelFactory):
+    class Meta:
+        model = PasswordResetAttempt

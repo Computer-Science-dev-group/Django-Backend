@@ -2,7 +2,9 @@ import logging
 from typing import Any
 
 from config.celery_app import app as CELERY_APP
-from uia_backend.notification.utils.email_senders import SendInBlueEmailSender
+from uia_backend.notification.utils.email_senders import (
+    get_configured_email_service_provider_sender,
+)
 
 Logger = logging.getLogger()
 
@@ -21,7 +23,8 @@ def send_template_email_task(
     else:
         track_ids = internal_tracker_ids
 
-    SendInBlueEmailSender().send_template_mail(
+    sender_class = get_configured_email_service_provider_sender()
+    sender_class().send_template_mail(
         recipients=recipients,
         internal_tracker_ids=track_ids,
         template_data=template_merge_data,
