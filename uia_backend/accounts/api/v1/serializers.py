@@ -13,6 +13,7 @@ from uia_backend.accounts import constants
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    Follows
     FriendShip,
     FriendShipInvitation,
     PasswordResetAttempt,
@@ -195,6 +196,21 @@ class UserProfileSerializer(serializers.ModelSerializer):
             instance.userhandle.user_handle if hasattr(instance, "userhandle") else None
         )
         return data
+
+
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ['id', 'email', 'first_name', 'last_name']
+
+
+class FollowsSerializer(serializers.ModelSerializer):
+    user_from = CustomUserSerializer(read_only=True)
+    user_to = CustomUserSerializer(read_only=True)
+
+    class Meta:
+        model = Follows
+        fields = ['user_from', 'user_to', 'created']
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
