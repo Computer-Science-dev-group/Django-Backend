@@ -164,7 +164,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ['id', 'email', 'first_name', 'last_name']
+        fields = ["id", "first_name", "last_name", "profile_picture"]
 
 
 class FollowsSerializer(serializers.ModelSerializer):
@@ -173,9 +173,10 @@ class FollowsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Follows
-        fields = ['user_from', 'user_to', 'created']_
-object()
-sclas ChangePasswordSerializer(serializers.ModelSerializer):
+        fields = ["user_from", "user_to", "created"]
+
+
+class ChangePasswordSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
         fields = ["password"]

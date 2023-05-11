@@ -267,39 +267,27 @@ class FollowAPIView(generics.GenericAPIView):
         )
 
 
-class FollowerListAPIView(generics.GenericAPIView):
+class FollowerListAPIView(generics.RetrieveAPIView):
     serializer_class = CustomUserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request: Request, user_id) -> Response:
-        try:
-            user = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(
-                {
-                    "info": "Failure", 
-                    "message": "That user does not exist.",
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
+    def get(self, request: Request) -> Response:
+        user = request.user
         followers = user.get_followers()
+        # followers_count = user.get_followers_count()
         serializer = self.get_serializer(followers, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
-class FollowingListAPIView(generics.GenericAPIView):
+class FollowingListAPIView(generics.RetrieveAPIView):
     serializer_class = CustomUserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, user_id) -> Response:
-        try:
-            user = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(status=404)
-
+    def get(self, request: Request) -> Response:
+        user = request.user
         following = user.get_following()
-        serializer = CustomUserSerializer(following, many=True)
+        # following_count = user.get_following_count()
+        serializer = self.get_serializer(following, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
