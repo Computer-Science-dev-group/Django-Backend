@@ -31,7 +31,8 @@ class UserRegistrationAPIView(generics.CreateAPIView):
                 response_only=True,
                 value={
                     "info": "Success",
-                    "message": {
+                    "code": 201,
+                    "data": {
                         "first_name": "string",
                         "last_name": "string",
                         "email": "user@example.com",
@@ -90,7 +91,8 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
                 response_only=True,
                 value={
                     "info": "Success",
-                    "message": {
+                    "code": 200,
+                    "data": {
                         "first_name": "string",
                         "last_name": "string",
                         "faculty": "string",
@@ -111,6 +113,35 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         """Subsequent updates to the user profile"""
         return super().put(request, *args, **kwargs)
 
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "code": 200,
+                    "data": {
+                        "first_name": "string",
+                        "last_name": "string",
+                        "profile_picture": "path/image.png",
+                        "cover_photo": "path/image.png",
+                        "phone_number": "string",
+                        "display_name": "string",
+                        "year_of_graduation": "1990",
+                        "department": "string",
+                        "faculty": "Science",
+                        "bio": "string",
+                        "gender": "string",
+                        "date_of_birth": "2000-10-08",
+                    },
+                },
+            )
+        ]
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().get(request, *args, **kwargs)
+
 
 class ChangePasswordAPIView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
@@ -125,7 +156,11 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
             OpenApiExample(
                 "Example",
                 response_only=True,
-                value={"info": "Success", "message": "Password Changed Successfully."},
+                value={
+                    "code": 201,
+                    "info": "Success",
+                    "message": "Password Changed Successfully.",
+                },
             )
         ]
     )
@@ -143,8 +178,9 @@ class LoginAPIView(generics.GenericAPIView):
                 "Example",
                 response_only=True,
                 value={
-                    "info": "Success",
-                    "message": {"auth_token": "jwt-token-asasasas"},
+                    "status": "Success",
+                    "code": 200,
+                    "data": {"auth_token": "jwt-token-asasasas"},
                 },
             )
         ]
