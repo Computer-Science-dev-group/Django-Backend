@@ -161,10 +161,11 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
         return instance
 
+
 class CustomUserSerializer(serializers.ModelSerializer):
     class Meta:
         model = CustomUser
-        fields = ["id", "first_name", "last_name", "profile_picture"]
+        fields = ["id", "first_name", "last_name", "profile_picture", "follows"]
 
 
 class FollowsSerializer(serializers.ModelSerializer):

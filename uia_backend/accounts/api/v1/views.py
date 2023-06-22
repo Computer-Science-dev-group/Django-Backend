@@ -112,156 +112,99 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         return super().put(request, *args, **kwargs)
 
 
-# class FollowUserAPIView(generics.GenericAPIView):
-#     permission_classes = [permissions.IsAuthenticated]
-    
-#     def get_object(self) -> Any:
-#         return self.request.user
 
-#     @extend_schema(
-#         examples=[
-#             OpenApiExample(
-#                 "Example",
-#                 response_only=True,
-#                 value={"info": "Success", "message": "You Followed User Successfully."},
-#             )
-#         ]
-#     )
-#     def post(self, request: Request, user_id) -> Response:
-#         user_to_follow = CustomUser.objects.get(id=user_id)
-#         current_user = self.get_object()
-
-#         if user_to_follow == current_user:
-#             return Response(
-#                 {
-#                     "info": "Failure", 
-#                     "message": "You cannot follow yourself",
-#                 },
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#         current_user.following.add(user_to_follow)
-#         current_user.save()
-
-#         return Response(
-#             {
-#                 "info": "Success", 
-#                 "message": f"You Followed {user_to_follow.get_full_name()} Successfully",
-#             },
-#             status=status.HTTP_200_OK
-#         )
-
-
-# class UnfollowUserAPIView(generics.GenericAPIView):
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_object(self) -> Any:
-#         return self.request.user
-
-#     @extend_schema(
-#         examples=[
-#             OpenApiExample(
-#                 "Example",
-#                 response_only=True,
-#                 value={"info": "Success", "message": "You Unfollowed User Successfully."},
-#             )
-#         ]
-#     )
-#     def post(self, request: Request, user_id) -> Response:
-#         try:
-#             user_to_unfollow = CustomUser.objects.get(id=user_id)
-#             current_user = self.get_object()
-
-#             current_user.following.remove(user_to_unfollow)
-#             current_user.save()
-
-#             return Response(
-#                 {
-#                     "info": "Success", 
-#                     "message": f"You Unfollowed {user_to_unfollow.get_full_name()} Successfully.",
-#                 },
-#                 status=status.HTTP_200_OK
-#             )
-        
-#         except CustomUser.DoesNotExist:
-#             return Response(
-#                 {
-#                     "info": "Failure", 
-#                     "message": "That user does not exist.",
-#                 },
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
-    
-class FollowAPIView(generics.GenericAPIView):
+class FollowsAPIView(generics.GenericAPIView):
+    serializer_class = FollowsSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["post", "delete"]
 
     def get_object(self) -> Any:
         return self.request.user
 
-    def post(self, request: Request, user_id) -> Response:
+    def post(self, request: Request, user_id: str) -> Response:
         try:
             user_to = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
             return Response(
                 {
-                    "info": "Failure", 
+                    "info": "Failure",
                     "message": "That user does not exist.",
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
 
         if self.get_object() != user_to:
-            if self.get_object().follow(user_to):
+            data = { "user_from": self.request.user, "user_to": user_to }
+            serializer = FollowsSerializer(data=data)
+
+            if serializer.is_valid():
+                serializer.save()
+
                 return Response(
                     {
-                         "info": "Success", 
-                         "message": f"You followed {user_to.get_full_name()} Successfully",
+                        "info": "Success",
+                        "message": f"You followed { user_to.get_full_name() } successfully",
                     },
                     status=status.HTTP_200_OK
                 )
             else:
                 return Response(
                     {
-                         "info": "Success", 
-                         "message": f"You already follow {user_to.get_full_name()}",
+                         "info": "Failure",
+                         "message": f"You already follow { user_to.get_full_name() }",
                     },
                     status=status.HTTP_200_OK
                 )
 
         return Response(
             {
-                    "info": "Failure", 
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                    "info": "Failure",
+                    "message": f"You cannot unfollow { user_to.get_full_name() }. You didn't follow them.",
             },
             status=status.HTTP_40O_BAD_REQUEST
         )
 
-    def delete(self, request: Request, user_id) -> Response:
+    def delete(self, request: Request, user_id: str) -> Response:
         try:
             user_to = CustomUser.objects.get(id=user_id)
         except CustomUser.DoesNotExist:
             return Response(
                 {
-                    "info": "Failure", 
+                    "info": "Failure",
                     "message": "That user does not exist.",
                 },
                 status=status.HTTP_404_NOT_FOUND
             )
 
         if self.get_object() != user_to:
-            self.get_object().unfollow(user_to)            
-            return Response(
-                {
-                    "info": "Success", 
-                    "message": f"You Unfollowed {user_to.get_full_name()} Successfully.",
-                },
-                status=status.HTTP_200_OK
-            )
-        
+            follow_relationship = Follows.objects.filter(user_from=self.request.user, user_to=user_to).first()
+
+            if follow_relationship:
+                serializer = FollowsSerializer(follow_relationship)
+
+                if serializer.is_valid():
+                    follow_relationship.delete()
+
+                    return Response(
+                        {
+                            "info": "Success",
+                            "message": f"You unfollowed { user_to.get_full_name() } successfully.",
+                        },
+                        status=status.HTTP_200_OK
+                    )
+                else:
+                    return Response(
+                        {
+                            "info": "Failure",
+                            "message": f"You cannot unfollow { user_to.get_full_name() }. You didn't follow them.",
+                        },
+                        status=status.HTTP_40O_BAD_REQUEST
+                    )
+
         return Response(
             {
-                    "info": "Failure", 
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                    "info": "Failure",
+                    "message": f"You cannot unfollow { user_to.get_full_name() }. You didn't follow them.",
             },
             status=status.HTTP_40O_BAD_REQUEST
         )
@@ -286,7 +229,6 @@ class FollowingListAPIView(generics.RetrieveAPIView):
     def get(self, request: Request) -> Response:
         user = request.user
         following = user.get_following()
-        # following_count = user.get_following_count()
         serializer = self.get_serializer(following, many=True)
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
@@ -298,22 +240,6 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
 
     def get_object(self) -> Any:
         return self.request.user
-
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={"info": "Success", "message": "Password Changed Successfully."},
-            )
-        ]
-    )
-    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().put(request, *args, **kwargs)
-
-
-class LoginAPIView(generics.GenericAPIView):
-    serializer_class = LoginSerializer
     permission_classes = [permissions.AllowAny]
 
     @extend_schema(

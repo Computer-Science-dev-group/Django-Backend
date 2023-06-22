@@ -1,4 +1,6 @@
-from unittest import mock
+from unittest import TestCase, mock
+
+from requests import request
 
 import responses
 from django.conf import settings
@@ -207,13 +209,58 @@ class EmailVerificationAPIViewTests(APITestCase):
             },
         )
 
+class UserFollowsAPIViewTests(APITestCase):
+    def setUp(self):
+        self.follow_or_unfollow_url = reverse("accounts_api_v1:user_follow_or_unfollow")
+        self.follower_list_url = reverse("accounts_api_v1:user_follower_list")
+        self.following_list_url = reverse("accounts_api_v1:user_following_list")
+        self.user_1 = UserModelFactory.create(is_active=True, is_verified=True)
+        self.user_2 = UserModelFactory.create(is_active=True, is_verified=True)
+
+    def test_unauthenticated_user_cannot_follow(self):
+        """Test if an unauthenticated user can follow other users."""
+
+        response = self.client.post(self.follow_or_unfollow_url, args=[self.user_2.id])
+        self.assertEqual(response.status_code, 401)
+
+    def test_unauthenticated_user_cannot_unfollow(self):
+        """Test if an unauthenticated user can unfollow other users."""
+
+        response = self.client.delete(self.follow_or_unfollow_url, args=[self.user_2.id])
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_follow_users(self):
+        """Test if an authenticated user can follow other users."""
+
+        self.client.force_authenticate(user=self.user_1)
+        response = self.client.post(self.url, args=[self.user_2.id])
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            dict(response.json()["data"]),
+            {
+                "message": f"You followed { self.user_2.get_full_name() } successfully",
+            },
+        )
+
+    def test_authenticated_user_can_unfollow_users(self):
+        """Test if an authenticated user can unfollow other users."""
+
+        self.client.force_authenticate(user=self.user_1)
+        response = self.client.delete(self.url, args=[self.user_2.id])
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(
+            dict(response.json()["data"]),
+            {
+                "message": f"You unfollowed { self.user_2.get_full_name() } successfully",
+            },
+        )
 
 class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")
         self.user = UserModelFactory.create(is_active=True, is_verified=True)
 
-    def test_unauthenticated_user_can_view_profile(self):
+    def test_unauthenticated_user_cannot_view_profile(self):
         """Test if an unauthenticated user can view profile."""
 
         response = self.client.get(self.url, args=[self.user.id])

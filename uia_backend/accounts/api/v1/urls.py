@@ -25,12 +25,12 @@ urlpatterns = [
         "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),
     path(
-         "me/follow/<uuid:user_id>", FollowAPIView.as_view(), name="user_follow_unfollow"
+        "me/follow/<uuid:user_id>/", FollowAPIView.as_view(), name="user_follow_or_unfollow"
     ),
     path(
-         "me/followers", FollowerListAPIView.as_view(), name="user_followers_list"
+        "me/followers/", FollowerListAPIView.as_view(), name="user_followers_list"
     ),
     path(
-         "me/following", FollowingListAPIView.as_view(), name="user_following_list"
+        "me/following/", FollowingListAPIView.as_view(), name="user_following_list"
     ),
 ]
