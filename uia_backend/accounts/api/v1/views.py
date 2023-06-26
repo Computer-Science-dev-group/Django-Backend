@@ -277,8 +277,8 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
         else:
             return Response(
                 {
-                        "info": "Failure",
-                        "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                    "info": "Failure",
+                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
                 },
                 status=status.HTTP_40O_BAD_REQUEST,
             )
@@ -359,6 +359,32 @@ class VerifyResetPasswordAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class LoginAPIView(generics.GenericAPIView):
+    serializer_class = LoginSerializer
+    permission_classes = [permissions.AllowAny]
+
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "status": "Success",
+                    "code": 200,
+                    "data": {"auth_token": "jwt-token-asasasas"},
+                },
+            )
+        ]
+    )
+    def post(self, request: Request) -> Response:
+        """User login view."""
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        # NOTE: we can send a task here to store login attempt
+        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 class ResetPasswordAPIView(generics.GenericAPIView):
