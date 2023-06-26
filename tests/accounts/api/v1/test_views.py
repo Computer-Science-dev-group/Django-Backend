@@ -266,6 +266,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
             },
         )
 
+
 class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")

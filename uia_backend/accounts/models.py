@@ -64,7 +64,6 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     last_login = models.DateTimeField(null=True)
     app_version = models.CharField(max_length=100, blank=True, null=True)
 
-
     objects = CustomUserManager()
 
     USERNAME_FIELD = "email"
