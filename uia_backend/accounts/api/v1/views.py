@@ -179,11 +179,11 @@ class FollowAPIView(generics.CreateAPIView):
                     "info": "Failure",
                     "message": "The user to follow does not exist.",
                 },
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if self.request.user.id != user_to.id:
-            data = { "user_from": self.request.user, "user_to": user_to }
+            data = {"user_from": self.request.user, "user_to": user_to}
             serializer = FollowsSerializer(data=data)
 
             if serializer.is_valid():
@@ -194,7 +194,7 @@ class FollowAPIView(generics.CreateAPIView):
                         "info": "Success",
                         "message": f"You followed {user_to.get_full_name()} successfully.",
                     },
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
             else:
                 return Response(
@@ -202,7 +202,7 @@ class FollowAPIView(generics.CreateAPIView):
                         "info": "Failure",
                         "message": f"You already follow {user_to.get_full_name()}.",
                     },
-                    status=status.HTTP_200_OK
+                    status=status.HTTP_200_OK,
                 )
         else:
             return Response(
@@ -210,7 +210,7 @@ class FollowAPIView(generics.CreateAPIView):
                     "info": "Failure",
                     "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
                 },
-                status=status.HTTP_40O_BAD_REQUEST
+                status=status.HTTP_40O_BAD_REQUEST,
             )
 
 
@@ -245,11 +245,13 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
                     "info": "Failure",
                     "message": "The user to unfollow does not exist.",
                 },
-                status=status.HTTP_404_NOT_FOUND
+                status=status.HTTP_404_NOT_FOUND,
             )
 
         if self.request.user.id != user_to.id:
-            follow_relationship = Follows.objects.filter(user_from=self.request.user, user_to=user_to).first()
+            follow_relationship = Follows.objects.filter(
+                user_from=self.request.user, user_to=user_to
+            ).first()
 
             if follow_relationship:
                 serializer = FollowsSerializer(follow_relationship)
@@ -262,7 +264,7 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
                             "info": "Success",
                             "message": f"You unfollowed {user_to.get_full_name()} successfully.",
                         },
-                        status=status.HTTP_200_OK
+                        status=status.HTTP_200_OK,
                     )
                 else:
                     return Response(
@@ -270,7 +272,7 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
                             "info": "Failure",
                             "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
                         },
-                        status=status.HTTP_40O_BAD_REQUEST
+                        status=status.HTTP_40O_BAD_REQUEST,
                     )
         else:
             return Response(
@@ -278,7 +280,7 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
                         "info": "Failure",
                         "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
                 },
-                status=status.HTTP_40O_BAD_REQUEST
+                status=status.HTTP_40O_BAD_REQUEST,
             )
 
 

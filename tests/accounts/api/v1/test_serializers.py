@@ -273,17 +273,21 @@ class FollowsSerializerTests(CustomSerializerTests):
     NON_REQUIRED_FIELDS = []
 
     def setUp(self) -> None:
-        user_1 = UserModelFactory.create(email="user1@example.com", is_active=True, is_verified=True)
+        user_1 = UserModelFactory.create(
+            email="user1@example.com", is_active=True, is_verified=True
+        )
         user_1.set_password("12345")
         user_1.save()
 
-        user_2 = UserModelFactory.create(email="user2@example.com", is_active=True, is_verified=True)
+        user_2 = UserModelFactory.create(
+            email="user2@example.com", is_active=True, is_verified=True
+        )
         user_2.set_password("12345")
         user_2.save()
 
         self.VALID_DATA = [
             {
-                "data": { "user_from": self.user_1, "user_to": self.user_2 },
+                "data": {"user_from": self.user_1, "user_to": self.user_2},
                 "lable": "Test valid data for follow relationship between users",
                 "context": None,
             }
@@ -291,7 +295,7 @@ class FollowsSerializerTests(CustomSerializerTests):
 
         self.INVALID_DATA = [
             {
-                "data": { "user_from": "string", "user_to": "string" },
+                "data": {"user_from": "string", "user_to": "string"},
                 "lable": "Test invalid data for follow relationship between users",
                 "context": None,
             }

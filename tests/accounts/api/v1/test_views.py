@@ -241,9 +241,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         """Test if an authenticated user can follow other users."""
 
         self.client.force_authenticate(user=self.user_1)
-        response = self.client.post(
-            self.follow_url, args=[self.user_2.id]
-        )
+        response = self.client.post(self.follow_url, args=[self.user_2.id])
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
             response.json(),
@@ -257,9 +255,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         """Test if an authenticated user can unfollow other users."""
 
         self.client.force_authenticate(user=self.user_1)
-        response = self.client.delete(
-            self.unfollow_url, args=[self.user_2.id]
-        )
+        response = self.client.delete(self.unfollow_url, args=[self.user_2.id])
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
             response.json(),
