@@ -1,5 +1,6 @@
 import logging
 
+from anymail.backends.sendgrid import EmailBackend as SendGrid_EmailBackend
 from anymail.backends.sendinblue import EmailBackend as SIB_EmailBackend
 from anymail.signals import AnymailTrackingEvent, tracking
 from django.dispatch import receiver
@@ -19,6 +20,11 @@ def signal_receiver(sender, event: AnymailTrackingEvent, esp_name: str, **kwargs
         and event.event_type in SIBTrackingHandler._allowed_events
     ):
         SIBTrackingHandler(event).signal_handeler()
+    elif (
+        esp_name == SendGrid_EmailBackend.esp_name
+        and event.event_type in SendGridTrackingHandler._allowed_events
+    ):
+        SendGridTrackingHandler(event).signal_handeler()
 
 
 class BaseEmailTrackingHandler:
@@ -100,6 +106,76 @@ class SIBTrackingHandler(BaseEmailTrackingHandler):
                 ),
                 extra={
                     "esp": EmailMessageModel.ESP_TYPE_SENDINBLUE,
+                    "message_id": self.event.message_id,
+                },
+            )
+            return
+
+        EmailTrackingModel.objects.create(
+            message=message,
+            event_timestamp=self.event.timestamp,
+            event_type=self._resolve_event_type(),
+            metadata=self.event.metadata,
+            rejection_reason=self.event.reject_reason,
+            raw_event_data=self.event.esp_event,
+        )
+
+        self._update_email_message(message)
+
+
+class SendGridTrackingHandler(BaseEmailTrackingHandler):
+    _allowed_events = ("delivered", "bounced", "opened", "deferred")
+    _event_mapping = {
+        "delivered": email_constants.EMAIL_EVENT_TYPE_DELIVERED,
+        "bounced": email_constants.EMAIL_EVENT_TYPE_BOUNCED,
+        "deferred": email_constants.EMAIL_EVENT_TYPE_DEFFERED,
+        "opened": email_constants.EMAIL_EVENT_TYPE_OPENED,
+    }
+
+    def _update_email_message(self, message: EmailMessageModel) -> None:
+        """Update the status of the associated email message"""
+
+        event = self._resolve_event_type()
+        old_status = message.status
+        new_status = message.status
+
+        if event in (
+            email_constants.EMAIL_EVENT_TYPE_DELIVERED,
+            email_constants.EMAIL_EVENT_TYPE_OPENED,
+        ):
+            new_status = EmailMessageModel.EMAIL_MESSAGE_STATUS_SUCCESS
+
+        elif event in (
+            email_constants.EMAIL_EVENT_TYPE_BOUNCED,
+            email_constants.EMAIL_EVENT_TYPE_REJECTED,
+        ):
+            new_status = EmailMessageModel.EMAIL_MESSAGE_STATUS_FAILED
+        else:
+            new_status = EmailMessageModel.EMAIL_MESSAGE_STATUS_PENDING
+
+        if old_status != new_status:
+            message.status = new_status
+            message.status_changes.append({"from": old_status, "to": new_status})
+            message.save(update_fields=["status", "status_changes"])
+
+    def _resolve_event_type(self) -> int:
+        """This returns the event type"""
+        return self._event_mapping[self.event.event_type]
+
+    def signal_handeler(self) -> None:
+        """Handles sendgrid anymail signals"""
+        message = EmailMessageModel.objects.filter(
+            esp=EmailMessageModel.ESP_TYPE_SENDGRID, message_id=self.event.message_id
+        ).first()
+
+        if message is None:
+            Logger.error(
+                (
+                    "uia_backend::libs::utils::emails::SendGridTrackingHandler::signal_handler::"
+                    "EmailMessage record not found"
+                ),
+                extra={
+                    "esp": EmailMessageModel.ESP_TYPE_SENDGRID,
                     "message_id": self.event.message_id,
                 },
             )
