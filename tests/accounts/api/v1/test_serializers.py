@@ -1,18 +1,27 @@
+import random
 import uuid
 
 from dateutil.relativedelta import relativedelta
 from django.core import signing
 from django.utils import timezone
 
-from tests.accounts.test_models import EmailVerificationFactory, UserModelFactory
+from tests.accounts.test_models import (
+    EmailVerificationFactory,
+    PasswordResetAttemptFactory,
+    UserModelFactory,
+)
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
     FollowsSerializer,
     LoginSerializer,
+    ResetPasswordSerializer,
+    RestPasswordRequestSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    VerifyResetPasswordOTPSerializer,
 )
+from uia_backend.accounts.models import PasswordResetAttempt
 from uia_backend.libs.testutils import CustomSerializerTests
 
 
@@ -338,5 +347,205 @@ class LoginSerializerTests(CustomSerializerTests):
                 "data": {"password": "12345", "email": "inactive@example.com"},
                 "lable": "Test invalid inactive user.",
                 "context": None,
+            },
+        ]
+
+
+class RestPasswordRequestSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = RestPasswordRequestSerializer
+
+    REQUIRED_FIELDS = ["email"]
+    NON_REQUIRED_FIELDS = []
+
+    def setUp(self) -> None:
+        active_user = UserModelFactory.create(email="user@example.com", is_active=True)
+        inactive_user = UserModelFactory.create(
+            email="inactive@example.com", is_active=False
+        )
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "email": active_user.email,
+                },
+                "lable": "Test valid data",
+                "context": None,
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "email": "",
+                },
+                "lable": "Test empty email",
+                "context": None,
+            },
+            {
+                "data": {
+                    "email": "invalid_email_address",
+                },
+                "lable": "Test invalid email address",
+                "context": None,
+            },
+            {
+                "data": {
+                    "email": inactive_user.email,
+                },
+                "lable": "Test inactive email address",
+                "context": None,
+            },
+            {
+                "data": {
+                    "email": "some_non_existent_user@example.com",
+                },
+                "lable": "Test non-existent email address",
+                "context": None,
+            },
+        ]
+
+
+class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = VerifyResetPasswordOTPSerializer
+
+    REQUIRED_FIELDS = ["otp", "email"]
+    NON_REQUIRED_FIELDS = ["password_change_key"]
+
+    def setUp(self) -> None:
+        user = UserModelFactory.create(is_active=True)
+
+        otp = 333555
+        signer = signing.Signer()
+        pending_signature = signer.sign(str(otp))
+
+        PasswordResetAttemptFactory.create(
+            expiration_datetime=(timezone.now() + relativedelta(minutes=10)),
+            signed_otp=pending_signature,
+            user=user,
+            status=PasswordResetAttempt.STATUS_PENDING,
+        )
+
+        PasswordResetAttemptFactory.create(
+            user=user,
+            expiration_datetime=(timezone.now() + relativedelta(minutes=10)),
+            signed_otp=signer.sign("111111"),
+            status=random.choice(
+                [
+                    PasswordResetAttempt.STATUS_EXPIRED,
+                    PasswordResetAttempt.STATUS_OTP_VERIFIED,
+                    PasswordResetAttempt.STATUS_SUCCESS,
+                ]
+            ),
+        )
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "otp": str(otp),
+                    "email": user.email,
+                },
+                "lable": "Test valid data",
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "otp": "000000",
+                    "email": user.email,
+                },
+                "lable": "Test invalid otp signature",
+            },
+            {
+                "data": {
+                    "otp": "111111",
+                    "email": user.email,
+                },
+                "lable": "Non pending otp",
+            },
+            {
+                "data": {
+                    "otp": str(otp),
+                    "email": "invalid_email@example.com",
+                },
+                "lable": "Test invalid email",
+            },
+        ]
+
+
+class ResetPasswordSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = ResetPasswordSerializer
+
+    REQUIRED_FIELDS = ["new_password", "email", "password_change_key"]
+    NON_REQUIRED_FIELDS = []
+
+    def setUp(self) -> None:
+        user = UserModelFactory.create(is_active=True)
+
+        otp = 333555
+        signer = signing.Signer()
+        pending_signature = signer.sign(str(otp))
+
+        verified_password_reset_record = PasswordResetAttemptFactory.create(
+            expiration_datetime=(timezone.now() + relativedelta(minutes=10)),
+            signed_otp=pending_signature,
+            user=user,
+            status=PasswordResetAttempt.STATUS_OTP_VERIFIED,
+        )
+
+        non_verified_password_reset_record = PasswordResetAttemptFactory.create(
+            user=user,
+            expiration_datetime=(timezone.now() + relativedelta(minutes=10)),
+            signed_otp=signer.sign("111111"),
+            status=random.choice(
+                [
+                    PasswordResetAttempt.STATUS_EXPIRED,
+                    PasswordResetAttempt.STATUS_PENDING,
+                    PasswordResetAttempt.STATUS_SUCCESS,
+                ]
+            ),
+        )
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "new_password": "f_g68Ata7jPqqmm",
+                    "email": user.email,
+                    "password_change_key": verified_password_reset_record.generate_signed_identifier(),
+                },
+                "lable": "Test valid data",
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "new_password": "f_g68Ata7jPqqmm",
+                    "email": user.email,
+                    "password_change_key": non_verified_password_reset_record.generate_signed_identifier(),
+                },
+                "lable": "Non verified otp signature",
+            },
+            {
+                "data": {
+                    "new_password": "f_g68Ata7jPqqmm",
+                    "email": "invalid_email@example.com",
+                    "password_change_key": verified_password_reset_record.generate_signed_identifier(),
+                },
+                "lable": "Invalid email address.",
+            },
+            {
+                "data": {
+                    "new_password": "string",
+                    "email": user.email,
+                    "password_change_key": verified_password_reset_record.generate_signed_identifier(),
+                },
+                "lable": "Invalid password.",
             },
         ]

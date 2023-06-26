@@ -13,6 +13,7 @@ from tests.accounts.test_models import UserModelFactory
 from uia_backend.accounts import constants as account_constants
 from uia_backend.accounts.models import EmailVerification
 from uia_backend.accounts.utils import (
+    generate_reset_password_otp,
     get_location_from_ip,
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
@@ -219,3 +220,15 @@ class SendUserPasswordChangeEmailNotificationTests(TestCase):
                 },
             },
         )
+
+
+class GenerateResetPasswordOtpTests(TestCase):
+    @mock.patch(
+        "uia_backend.accounts.utils.secrets.randbelow", side_effect=[1, 2, 3, 4, 5, 6]
+    )
+    def test_method(self, mock_secret):
+        signer = signing.Signer()
+        otp, signed_otp = generate_reset_password_otp()
+
+        self.assertEqual(otp, "123456")
+        self.assertEqual(signer.unsign(signed_otp), "123456")

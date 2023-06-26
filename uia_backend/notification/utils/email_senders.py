@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 
+from django.conf import settings
 from django.core.mail import EmailMessage, get_connection
 
 from uia_backend.notification.models import EmailMessageModel
@@ -132,7 +133,6 @@ class SendGridEmailSender(BaseEmailSender):
             message.merge_data = template_data
             message.send()
         except Exception as error:
-            print(error)
             Logger.error(
                 msg=(
                     "uia_backend::notification::utils::email_senders::"
@@ -148,3 +148,18 @@ class SendGridEmailSender(BaseEmailSender):
             internal_tracker_ids=internal_tracker_ids,
             message=message,
         )
+
+
+def get_configured_email_service_provider_sender() -> (
+    SendInBlueEmailSender | SendGridEmailSender | BaseEmailSender
+):
+    """Returns the sender class for the configured esp."""
+
+    sender = BaseEmailSender
+
+    if settings.EMAIL_BACKEND == "anymail.backends.sendgrid.EmailBackend":
+        sender = SendGridEmailSender
+    elif settings.EMAIL_BACKEND == "anymail.backends.sendinblue.EmailBackend":
+        sender = SendInBlueEmailSender
+
+    return sender

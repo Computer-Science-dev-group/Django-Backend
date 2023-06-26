@@ -5,6 +5,7 @@ from django.contrib.auth.models import (
     BaseUserManager,
     PermissionsMixin,
 )
+from django.core import signing
 from django.db import models
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
@@ -129,3 +130,30 @@ class EmailVerification(BaseAbstractModel):
     internal_tracker_id = models.UUIDField(default=uuid.uuid4)
     is_active = models.BooleanField(default=True)
     expiration_date = models.DateTimeField()
+
+
+class PasswordResetAttempt(BaseAbstractModel):
+    """Model that represent an attempt to reset a users password."""
+
+    STATUS_PENDING = 0  # otp has been created and sent to users email
+    STATUS_OTP_VERIFIED = 1  # otp has been verified and password can be reset
+    STATUS_SUCCESS = 2  # password has been successfully changed
+    STATUS_EXPIRED = 3  # otp has expired
+
+    STATUS_CHOICES = (
+        (STATUS_PENDING, "Pending"),
+        (STATUS_OTP_VERIFIED, "Verified"),
+        (STATUS_SUCCESS, "Success"),
+        (STATUS_EXPIRED, "Expired"),
+    )
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    internal_tracker_id = models.UUIDField(default=uuid.uuid4)
+    signed_otp = models.TextField()
+    status = models.IntegerField(choices=STATUS_CHOICES, default=STATUS_PENDING)
+    expiration_datetime = models.DateTimeField()
+
+    def generate_signed_identifier(self) -> str:
+        """Generate a signed value containg the id of a record."""
+        signer = signing.TimestampSigner()
+        return signer.sign(value=self.id)

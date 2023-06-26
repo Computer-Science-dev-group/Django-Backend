@@ -1,11 +1,12 @@
 import uuid
 from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 
 from uia_backend.notification.tasks import send_template_email_task
 
 
+@override_settings(EMAIL_BACKEND="anymail.backends.sendinblue.EmailBackend")
 class TestSendTemplateEmailTask(TestCase):
     @patch(
         "uia_backend.notification.utils.email_senders.SendInBlueEmailSender.send_template_mail"

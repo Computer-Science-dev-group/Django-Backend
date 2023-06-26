@@ -20,11 +20,9 @@ class ClusterManager:
         cluster query and memberships to create.
         """
         self.user = user
-        self.default_cluster_query = (
-            InternalCluster.objects.select_related("cluster")
-            .select_for_update()
-            .filter(is_active=True)
-        )
+        self.default_cluster_query = InternalCluster.objects.select_related(
+            "cluster"
+        ).filter(is_active=True)
         self.memberships_to_create: list[ClusterMembership] = []
 
     def _create_default_cluster(self, name: str, description: str) -> InternalCluster:

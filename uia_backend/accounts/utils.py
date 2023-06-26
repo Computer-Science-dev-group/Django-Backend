@@ -1,4 +1,6 @@
 import logging
+import secrets
+from uuid import UUID
 
 import requests
 from dateutil.relativedelta import relativedelta
@@ -56,7 +58,7 @@ def get_location_from_ip(ip: str) -> str | None:
             extra={"detail": str(error)},
         )
         return
-    # print(response.status_code)
+
     if response.status_code == 200:
         if response.text != "Undefined":
             return response.text
@@ -90,6 +92,39 @@ def send_user_password_change_email_notification(
                 "ip_address": ip_address,
                 "user_agent": user_agent,
                 "region": region,
+            },
+        },
+    )
+
+
+def generate_reset_password_otp() -> tuple[str, str]:
+    """Generate reset password otp."""
+
+    signer = signing.Signer()
+
+    otp = "".join(
+        [f"{secrets.randbelow(10)}" for _ in range(constants.PASSWORD_RESET_OTP_LENGTH)]
+    )
+
+    signed_otp = signer.sign(value=otp)
+    return otp, signed_otp
+
+
+def send_password_reset_otp_email_notification(
+    user: CustomUser,
+    otp: str,
+    internal_tracker_id: UUID,
+) -> None:
+    """Send a password reset otp email notification."""
+
+    send_template_email_task(
+        recipients=[user.email],
+        internal_tracker_ids=[str(internal_tracker_id)],
+        template_id=constants.PASSWORD_RESET_TEMPLATE_ID,
+        template_merge_data={
+            user.email: {
+                "otp": otp,
+                "expiration_in_minutes": constants.PASSWORD_RESET_ACTIVE_PERIOD,
             },
         },
     )

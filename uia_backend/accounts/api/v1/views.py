@@ -12,9 +12,13 @@ from uia_backend.accounts.api.v1.serializers import (
     EmailVerificationSerializer,
     FollowsSerializer,
     LoginSerializer,
+    ResetPasswordSerializer,
+    RestPasswordRequestSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
+    VerifyResetPasswordOTPSerializer,
 )
+from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
 
 from uia_backend.accounts.models import CustomUser, Follows
 
@@ -31,7 +35,8 @@ class UserRegistrationAPIView(generics.CreateAPIView):
                 response_only=True,
                 value={
                     "info": "Success",
-                    "message": {
+                    "code": 201,
+                    "data": {
                         "first_name": "string",
                         "last_name": "string",
                         "email": "user@example.com",
@@ -90,7 +95,8 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
                 response_only=True,
                 value={
                     "info": "Success",
-                    "message": {
+                    "code": 200,
+                    "data": {
                         "first_name": "string",
                         "last_name": "string",
                         "faculty": "string",
@@ -110,6 +116,35 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
     def put(self, request, *args, **kwargs) -> Response:
         """Subsequent updates to the user profile"""
         return super().put(request, *args, **kwargs)
+
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "code": 200,
+                    "data": {
+                        "first_name": "string",
+                        "last_name": "string",
+                        "profile_picture": "path/image.png",
+                        "cover_photo": "path/image.png",
+                        "phone_number": "string",
+                        "display_name": "string",
+                        "year_of_graduation": "1990",
+                        "department": "string",
+                        "faculty": "Science",
+                        "bio": "string",
+                        "gender": "string",
+                        "date_of_birth": "2000-10-08",
+                    },
+                },
+            )
+        ]
+    )
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().get(request, *args, **kwargs)
 
 
 
@@ -133,7 +168,7 @@ class FollowsAPIView(generics.GenericAPIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        if self.get_object() != user_to:
+        if self.request.user.id != user_to.id:
             data = { "user_from": self.request.user, "user_to": user_to }
             serializer = FollowsSerializer(data=data)
 
@@ -174,9 +209,9 @@ class FollowsAPIView(generics.GenericAPIView):
                     "message": "That user does not exist.",
                 },
                 status=status.HTTP_404_NOT_FOUND
-            )
 
-        if self.get_object() != user_to:
+
+        if self.request.user.id != user_to.id:
             follow_relationship = Follows.objects.filter(user_from=self.request.user, user_to=user_to).first()
 
             if follow_relationship:
@@ -248,8 +283,9 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
                 "Example",
                 response_only=True,
                 value={
-                    "info": "Success",
-                    "message": {"auth_token": "jwt-token-asasasas"},
+                    "status": "Success",
+                    "code": 200,
+                    "data": {"auth_token": "jwt-token-asasasas"},
                 },
             )
         ]
@@ -261,3 +297,38 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
         serializer.is_valid(raise_exception=True)
         # NOTE: we can send a task here to store login attempt
         return Response(data=serializer.data, status=status.HTTP_200_OK)
+
+
+class ResetPasswordRequestAPIView(generics.CreateAPIView):
+    serializer_class = RestPasswordRequestSerializer
+    permission_classes = [permissions.AllowAny]
+    throttle_classes = [PasswordRestThrottle]
+
+
+class VerifyResetPasswordAPIView(generics.GenericAPIView):
+    """View for verifying a password reset attempt using an OTP."""
+
+    serializer_class = VerifyResetPasswordOTPSerializer
+    permission_classes = [permissions.AllowAny]
+    http_method_names = ["post"]
+
+    def post(self, request: Request) -> Response:
+        """Verify password view."""
+
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
+class ResetPasswordAPIView(generics.GenericAPIView):
+    serializer_class = ResetPasswordSerializer
+    permission_classes = [permissions.AllowAny]
+    http_method_names = ["post"]
+
+    def post(self, request: Request) -> Response:
+        """Reset password view."""
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
