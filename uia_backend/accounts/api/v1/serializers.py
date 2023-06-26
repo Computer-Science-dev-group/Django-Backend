@@ -183,7 +183,7 @@ class FollowsSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Follows
-        fields = ["user_from", "user_to", "created"]
+        fields = ["user_from", "user_to"]
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):

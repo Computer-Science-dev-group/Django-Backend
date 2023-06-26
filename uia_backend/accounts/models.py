@@ -7,7 +7,6 @@ from django.contrib.auth.models import (
 )
 from django.core import signing
 from django.db import models
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from uia_backend.libs.base_models import BaseAbstractModel
@@ -57,7 +56,9 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     faculty = models.CharField(max_length=60)
     department = models.CharField(max_length=60)
     year_of_graduation = models.CharField(max_length=4)
-    follows = models.ManyToManyField("self", symmetrical=False, related_name="followers", through="Follows")
+    follows = models.ManyToManyField(
+        "self", symmetrical=False, related_name="followers", through="Follows"
+    )
     is_active = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True)
@@ -109,8 +110,12 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
 
 
 class Follows(models.Model):
-    user_from = models.ForeignKey(CustomUser, related_name="rel_from_set", on_delete=models.CASCADE)
-    user_to = models.ForeignKey(CustomUser, related_name="rel_to_set", on_delete=models.CASCADE)
+    user_from = models.ForeignKey(
+        CustomUser, related_name="rel_from_set", on_delete=models.CASCADE
+    )
+    user_to = models.ForeignKey(
+        CustomUser, related_name="rel_to_set", on_delete=models.CASCADE
+    )
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

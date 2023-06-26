@@ -284,18 +284,19 @@ class FollowsSerializerTests(CustomSerializerTests):
         self.VALID_DATA = [
             {
                 "data": { "user_from": self.user_1, "user_to": self.user_2 },
-                "lable": "Test valid data",
+                "lable": "Test valid data for follow relationship between users",
                 "context": None,
             }
         ]
 
         self.INVALID_DATA = [
             {
-                "data": { "user_from": "string", "user_to": "string" }
+                "data": { "user_from": "string", "user_to": "string" },
                 "lable": "Test invalid data for follow relationship between users",
                 "context": None,
             }
         ]
+
 
 class LoginSerializerTests(CustomSerializerTests):
     __test__ = True

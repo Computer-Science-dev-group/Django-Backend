@@ -1,7 +1,5 @@
-
 from datetime import timedelta
 from unittest import mock
-
 
 import responses
 from django.conf import settings
@@ -218,9 +216,10 @@ class EmailVerificationAPIViewTests(APITestCase):
             },
         )
 
-class UserFollowsAPIViewTests(APITestCase):
+class UserFollowAndUnFollowAPIViewTests(APITestCase):
     def setUp(self):
-        self.follow_or_unfollow_url = reverse("accounts_api_v1:user_follow_or_unfollow")
+        self.follow_url = reverse("accounts_api_v1:user_follow")
+        self.unfollow_url = reverse("accounts_api_v1:user_unfollow")
         self.follower_list_url = reverse("accounts_api_v1:user_follower_list")
         self.following_list_url = reverse("accounts_api_v1:user_following_list")
         self.user_1 = UserModelFactory.create(is_active=True, is_verified=True)
@@ -229,38 +228,44 @@ class UserFollowsAPIViewTests(APITestCase):
     def test_unauthenticated_user_cannot_follow(self):
         """Test if an unauthenticated user can follow other users."""
 
-        response = self.client.post(self.follow_or_unfollow_url, args=[self.user_2.id])
+        response = self.client.post(self.follow_url, args=[self.user_2.id])
         self.assertEqual(response.status_code, 401)
 
     def test_unauthenticated_user_cannot_unfollow(self):
         """Test if an unauthenticated user can unfollow other users."""
 
-        response = self.client.delete(self.follow_or_unfollow_url, args=[self.user_2.id])
+        response = self.client.delete(self.follow_url, args=[self.user_2.id])
         self.assertEqual(response.status_code, 401)
 
-    def test_authenticated_user_can_follow_users(self):
+    def test_authenticated_user_can_follow(self):
         """Test if an authenticated user can follow other users."""
 
         self.client.force_authenticate(user=self.user_1)
-        response = self.client.post(self.url, args=[self.user_2.id])
+        response = self.client.post(
+            self.follow_url, args=[self.user_2.id]
+        )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
-            dict(response.json()["data"]),
+            response.json(),
             {
-                "message": f"You followed { self.user_2.get_full_name() } successfully",
+                "info": "Success",
+                "message": f"You followed {self.user_2.get_full_name()} successfully.",
             },
         )
 
-    def test_authenticated_user_can_unfollow_users(self):
+    def test_authenticated_user_can_unfollow(self):
         """Test if an authenticated user can unfollow other users."""
 
         self.client.force_authenticate(user=self.user_1)
-        response = self.client.delete(self.url, args=[self.user_2.id])
+        response = self.client.delete(
+            self.unfollow_url, args=[self.user_2.id]
+        )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(
-            dict(response.json()["data"]),
+            response.json(),
             {
-                "message": f"You unfollowed { self.user_2.get_full_name() } successfully",
+                "info": "Success",
+                "message": f"You unfollowed {self.user_2.get_full_name()} successfully.",
             },
         )
 
