@@ -216,6 +216,7 @@ class EmailVerificationAPIViewTests(APITestCase):
             },
         )
 
+
 class UserFollowAndUnFollowAPIViewTests(APITestCase):
     def setUp(self):
         self.follow_url = reverse("accounts_api_v1:user_follow")

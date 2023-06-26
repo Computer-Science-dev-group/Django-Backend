@@ -19,7 +19,6 @@ from uia_backend.accounts.api.v1.serializers import (
     VerifyResetPasswordOTPSerializer,
 )
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
-
 from uia_backend.accounts.models import CustomUser, Follows
 
 
@@ -147,14 +146,12 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-
 class FollowAPIView(generics.CreateAPIView):
     serializer_class = FollowsSerializer
     permission_classes = [permissions.IsAuthenticated]
 
     def get_object(self) -> Any:
         return self.request.user
-
 
     @transaction.atomic()
     @extend_schema(
@@ -315,7 +312,6 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
 
     def get_object(self) -> Any:
         return self.request.user
-    permission_classes = [permissions.AllowAny]
 
     @extend_schema(
         examples=[

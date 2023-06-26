@@ -264,6 +264,7 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
         }
     ]
 
+
 class FollowsSerializerTests(CustomSerializerTests):
     __test__ = True
 

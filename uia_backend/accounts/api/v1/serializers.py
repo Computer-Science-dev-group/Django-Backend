@@ -10,14 +10,12 @@ from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
 
 from uia_backend.accounts import constants
-
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
     Follows,
     PasswordResetAttempt,
 )
-
 from uia_backend.accounts.utils import (
     generate_reset_password_otp,
     send_password_reset_otp_email_notification,
