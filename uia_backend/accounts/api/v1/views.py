@@ -1,6 +1,7 @@
 from typing import Any
 
 from django.db import transaction
+from django.db.models.query import Q, QuerySet
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.request import Request
@@ -9,14 +10,17 @@ from rest_framework.response import Response
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
+    FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
     RestPasswordRequestSerializer,
+    UserFriendShipSettingsSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyResetPasswordOTPSerializer,
 )
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
+from uia_backend.accounts.models import FriendShipInvitation, UserFriendShipSettings
 
 
 class UserRegistrationAPIView(generics.CreateAPIView):
@@ -227,3 +231,46 @@ class ResetPasswordAPIView(generics.GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class FriendShipInvitationListAPIView(generics.ListCreateAPIView):
+    serializer_class = FriendshipInvitationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[FriendShipInvitation]:
+        return FriendShipInvitation.objects.filter(
+            Q(created_by=self.request.user) | Q(user=self.request.user)
+        ).select_related("user", "created_by")
+
+    def perform_create(self, serializer: FriendshipInvitationSerializer) -> None:
+        serializer.save(created_by=self.request.user)
+
+
+class FriendShipInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = FriendshipInvitationSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "patch"]
+
+    def get_queryset(self) -> QuerySet[FriendShipInvitation]:
+        return FriendShipInvitation.objects.filter(
+            Q(created_by=self.request.user) | Q(user=self.request.user)
+        ).select_related("user", "created_by")
+
+
+class UserFriendShipsListAPIView(generics.ListAPIView):
+    serializer_class = UserFriendShipSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[UserFriendShipSettings]:
+        return UserFriendShipSettings.objects.filter(user=self.request.user)
+
+
+class UserFriendShipsDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+    serializer_class = UserFriendShipSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self) -> QuerySet[UserFriendShipSettings]:
+        return UserFriendShipSettings.objects.filter(user=self.request.user)
+
+    def perform_destroy(self, instance: UserFriendShipSettings) -> None:
+        instance.friendship.delete()

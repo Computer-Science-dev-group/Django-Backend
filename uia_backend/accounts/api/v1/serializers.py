@@ -13,7 +13,10 @@ from uia_backend.accounts import constants
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    FriendShip,
+    FriendShipInvitation,
     PasswordResetAttempt,
+    UserFriendShipSettings,
 )
 from uia_backend.accounts.utils import (
     generate_reset_password_otp,
@@ -411,3 +414,129 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: PasswordResetAttempt) -> dict[str, str]:
         return {"message": "Password Reset Successfully."}
+
+
+class FriendshipInvitationSerializer(serializers.ModelSerializer):
+    sent_to = serializers.PrimaryKeyRelatedField(
+        source="user",
+        queryset=CustomUser.objects.filter(is_active=True, is_verified=True),
+    )
+
+    class Meta:
+        model = FriendShipInvitation
+        fields = [
+            "id",
+            "sent_to",
+            "status",
+            "created_by",
+            "created_datetime",
+            "updated_datetime",
+        ]
+        read_only_fields = ["id", "created_by", "created_datetime", "updated_datetime"]
+
+    def validate_status(self, value: int) -> int:
+        """Validate value of status."""
+        instance: FriendShipInvitation | None = self.instance
+        user = self.context["request"].user
+
+        return_status = FriendShipInvitation.INVITATION_STATUS_PENDING
+
+        if (
+            instance
+            and instance.status == FriendShipInvitation.INVITATION_STATUS_PENDING
+        ):
+            if user == instance.user and value in [
+                FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+                FriendShipInvitation.INVITATION_STATUS_REJECTED,
+            ]:
+                return_status = value
+            elif (
+                user == instance.created_by
+                and value == FriendShipInvitation.INVITATION_STATUS_CANCLED
+            ):
+                return_status = value
+
+        return return_status
+
+    def validate_sent_to(self, value: CustomUser) -> CustomUser:
+        """validate sent_to."""
+        user = self.context["request"].user
+
+        # ensure users can send invitations to thier self
+        # ensure users cant send invitation to their friends
+        if (user == value) or FriendShip.objects.filter(
+            users__in=[user, value],
+        ).exists():
+            raise serializers.ValidationError(
+                "Invalid user. Can not send inivitation to this user."
+            )
+
+        return value
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        """Validate invitation data."""
+        attrs = super().validate(attrs)
+
+        # we want to ensure that user can creata a new invitation when one aready exits
+        if (
+            self.instance is None
+            and FriendShipInvitation.objects.filter(
+                created_by=self.context["request"].user,
+                user=attrs["user"],
+                status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            ).exists()
+        ):
+            raise serializers.ValidationError(
+                "Can not send new invitation. You already have a pending invitation sent to this user."
+            )
+
+        return attrs
+
+    def update(
+        self, instance: FriendShipInvitation, validated_data: dict[str, Any]
+    ) -> FriendShipInvitation:
+        """Update user invitation."""
+        # we want to ensure only invitatio status can be updated
+        validated_data.pop("user", None)
+
+        # we want to ensure that we dont change anything
+        # after status has transitioned from pending
+        if instance.status != FriendShipInvitation.INVITATION_STATUS_PENDING:
+            return instance
+
+        super().update(instance, validated_data)
+        if instance.status == FriendShipInvitation.INVITATION_STATUS_ACCEPTED:
+            self.__accept_friendship_invitation(instance)
+
+        return instance
+
+    def __accept_friendship_invitation(
+        self,
+        instance: FriendShipInvitation,
+    ) -> None:
+        """Create friendship object when user accepts invitation."""
+
+        friendship_record = FriendShip.objects.create()
+
+        UserFriendShipSettings.objects.create(
+            friendship=friendship_record,
+            invitation=instance,
+            user=instance.user,
+        )
+        UserFriendShipSettings.objects.create(
+            friendship=friendship_record,
+            invitation=instance,
+            user=instance.created_by,
+        )
+
+
+class UserFriendShipSettingsSerializer(serializers.ModelSerializer):
+    users = serializers.ListField(
+        child=serializers.PrimaryKeyRelatedField(read_only=True),
+        source="friendship__users",
+    )
+
+    class Meta:
+        model = UserFriendShipSettings
+        fields = ["id", "is_blocked", "users", "created_datetime", "updated_datetime"]
+        read_only_fields = ["id", "created_datetime", "updated_datetime"]

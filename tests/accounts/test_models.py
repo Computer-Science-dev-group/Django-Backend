@@ -5,7 +5,10 @@ from factory.django import DjangoModelFactory
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    FriendShip,
+    FriendShipInvitation,
     PasswordResetAttempt,
+    UserFriendShipSettings,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -21,6 +24,8 @@ class UserModelFactory(DjangoModelFactory):
     year_of_graduation = "2019"
     password = "f_g68Ata7jPqqmm"
     date_of_birth = timezone.now().date()
+    is_active = True
+    is_verified = True
 
     class Meta:
         model = CustomUser
@@ -81,3 +86,18 @@ class EmailVerificationFactory(DjangoModelFactory):
 class PasswordResetAttemptFactory(DjangoModelFactory):
     class Meta:
         model = PasswordResetAttempt
+
+
+class FriendShipInvitationFactory(DjangoModelFactory):
+    class Meta:
+        model = FriendShipInvitation
+
+
+class FriendShipFactory(DjangoModelFactory):
+    class Meta:
+        model = FriendShip
+
+
+class UserFriendShipSettingsFactory(DjangoModelFactory):
+    class Meta:
+        model = UserFriendShipSettings
