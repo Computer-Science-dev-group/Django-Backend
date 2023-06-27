@@ -3,9 +3,13 @@ from django.urls import path
 from uia_backend.accounts.api.v1.views import (
     ChangePasswordAPIView,
     EmailVerificationAPIView,
+    FriendShipInvitationDetailAPIView,
+    FriendShipInvitationListAPIView,
     LoginAPIView,
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
+    UserFriendShipsDetailAPIView,
+    UserFriendShipsListAPIView,
     UserProfileAPIView,
     UserRegistrationAPIView,
     VerifyResetPasswordAPIView,
@@ -34,5 +38,23 @@ urlpatterns = [
     path("me/profile/", UserProfileAPIView.as_view(), name="user_profile"),
     path(
         "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
+    ),
+    path(
+        "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"
+    ),
+    path(
+        "me/friendships/<uuid:pk>/",
+        UserFriendShipsDetailAPIView.as_view(),
+        name="user_friendship_details",
+    ),
+    path(
+        "me/friendships/invitations/",
+        FriendShipInvitationListAPIView.as_view(),
+        name="friendship_invitation",
+    ),
+    path(
+        "me/friendships/invitations/<uuid:pk>/",
+        FriendShipInvitationDetailAPIView.as_view(),
+        name="friendship_invitation_detail",
     ),
 ]

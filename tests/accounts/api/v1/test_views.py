@@ -6,19 +6,29 @@ from django.conf import settings
 from django.core import signing
 from django.urls import reverse
 from django.utils import timezone
+from rest_framework import serializers
 from rest_framework.test import APITestCase
 from rest_framework_simplejwt.tokens import AccessToken
 
 from tests.accounts.test_models import (
     EmailVerificationFactory,
+    FriendShipFactory,
+    FriendShipInvitationFactory,
     PasswordResetAttemptFactory,
+    UserFriendShipSettingsFactory,
     UserModelFactory,
 )
 from uia_backend.accounts.constants import (
     PASSWORD_RESET_ACTIVE_PERIOD,
     PASSWORD_RESET_TEMPLATE_ID,
 )
-from uia_backend.accounts.models import CustomUser, PasswordResetAttempt
+from uia_backend.accounts.models import (
+    CustomUser,
+    FriendShip,
+    FriendShipInvitation,
+    PasswordResetAttempt,
+    UserFriendShipSettings,
+)
 from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
 
 
@@ -851,4 +861,453 @@ class ResetPasswordAPIViewTests(APITestCase):
 
         self.assertEqual(
             self.reset_record.status, PasswordResetAttempt.STATUS_OTP_VERIFIED
+        )
+
+
+class FriendShipInvitationListAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.url = reverse("accounts_api_v1:friendship_invitation")
+        self.authenticated_user = UserModelFactory.create(email="user@1example.com")
+        self.invited_user = UserModelFactory.create(email="user@2example.com")
+
+    def test_create_invitation_successfuly(self):
+        """Test to assert that user can sucessfully create friendship invitations."""
+
+        valid_data = {
+            "sent_to": str(self.invited_user.id),
+            "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+        }
+
+        self.client.force_authenticate(user=self.authenticated_user)
+
+        response = self.client.post(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 201)
+
+        invitation_record = FriendShipInvitation.objects.filter(
+            created_by=self.authenticated_user,
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+        ).first()
+
+        self.assertIsNotNone(invitation_record)
+
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {
+                    "id": str(invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+    def test_create_invitation_failed_case_1(self):
+        """Test to assert that view fails when user tries to send invitation to friend."""
+
+        # Ensure users are friends
+        friendship_record = FriendShipFactory.create()
+        invitation_record = FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+            created_by=self.authenticated_user,
+        )
+        UserFriendShipSettingsFactory.create(
+            user=self.invited_user,
+            friendship=friendship_record,
+            invitation=invitation_record,
+        )
+        UserFriendShipSettingsFactory.create(
+            user=self.authenticated_user,
+            friendship=friendship_record,
+            invitation=invitation_record,
+        )
+
+        valid_data = {
+            "sent_to": str(self.invited_user.id),
+            "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+        }
+
+        self.client.force_authenticate(user=self.authenticated_user)
+
+        response = self.client.post(data=valid_data, path=self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "sent_to": ["Invalid user. Can not send inivitation to this user."]
+                },
+            },
+        )
+
+    def test_create_invitation_failed_case_2(self):
+        """Test to assert that view fails when a user already has a pending invitation to friend."""
+
+        FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            created_by=self.authenticated_user,
+        )
+
+        valid_data = {
+            "sent_to": str(self.invited_user.id),
+            "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+        }
+
+        self.client.force_authenticate(user=self.authenticated_user)
+
+        response = self.client.post(data=valid_data, path=self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "non_field_errors": [
+                        "Can not send new invitation. You already have a pending invitation sent to this user."
+                    ]
+                },
+            },
+        )
+
+    def test_create_invitation_failed_case_3(self):
+        """Test to ensure that invitation view fails when user tries to send invitation to theirself."""
+
+        valid_data = {
+            "sent_to": str(self.authenticated_user.id),
+            "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+        }
+
+        self.client.force_authenticate(user=self.authenticated_user)
+
+        response = self.client.post(data=valid_data, path=self.url)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "sent_to": ["Invalid user. Can not send inivitation to this user."]
+                },
+            },
+        )
+
+    def test_list_invitation_successfully(self):
+        """Test listing a users invitation"""
+
+        some_other_user = UserModelFactory.create(email="user@3example.com")
+
+        # invvitation record sent by user
+        record_1 = FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            created_by=self.authenticated_user,
+        )
+
+        # invvitation record sent to user
+        record_2 = FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            created_by=self.authenticated_user,
+        )
+
+        # invitation that shouldn't be listed
+        FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            created_by=some_other_user,
+        )
+
+        self.client.force_authenticate(user=self.authenticated_user)
+        response = self.client.get(path=self.url)
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "id": str(record_1.id),
+                        "sent_to": str(record_1.user.id),
+                        "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+                        "created_by": str(record_1.created_by.id),
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            record_1.created_datetime
+                        ),
+                        "updated_datetime": serializers.DateTimeField().to_representation(
+                            record_1.updated_datetime
+                        ),
+                    },
+                    {
+                        "id": str(record_2.id),
+                        "sent_to": str(record_2.user.id),
+                        "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+                        "created_by": str(record_2.created_by.id),
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            record_2.created_datetime
+                        ),
+                        "updated_datetime": serializers.DateTimeField().to_representation(
+                            record_2.updated_datetime
+                        ),
+                    },
+                ],
+            },
+        )
+
+
+class FriendShipInvitationDetailAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create(email="user@1example.com")
+        self.invited_user = UserModelFactory.create(email="user@2example.com")
+
+        self.invitation_record = FriendShipInvitationFactory.create(
+            user=self.invited_user,
+            status=FriendShipInvitation.INVITATION_STATUS_PENDING,
+            created_by=self.authenticated_user,
+        )
+
+        self.url = reverse(
+            "accounts_api_v1:friendship_invitation_detail",
+            args=[str(self.invitation_record.id)],
+        )
+
+    def test_accept_invitation_record_successfully(self):
+        """"""
+
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_ACCEPTED}
+        self.client.force_authenticate(self.invited_user)
+
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.invitation_record.refresh_from_db()
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+        friendship_record = FriendShip.objects.filter(
+            users__in=[self.authenticated_user, self.invited_user]
+        ).first()
+        self.assertIsNotNone(friendship_record)
+        self.assertEqual(
+            UserFriendShipSettings.objects.filter(
+                invitation=self.invitation_record, friendship=friendship_record
+            ).count(),
+            2,
+        )
+
+    def test_reject_invitation_record_successfully(self):
+        """"""
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_REJECTED}
+        self.client.force_authenticate(self.invited_user)
+
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.invitation_record.refresh_from_db()
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_REJECTED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+        friendship_record = FriendShip.objects.filter(
+            users__in=[self.authenticated_user, self.invited_user]
+        ).first()
+        self.assertIsNone(friendship_record)
+        self.assertEqual(
+            UserFriendShipSettings.objects.filter(
+                invitation=self.invitation_record,
+            ).count(),
+            0,
+        )
+
+    def test_cancle_invitation_record_successfully(self):
+        """"""
+
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_CANCLED}
+        self.client.force_authenticate(self.authenticated_user)
+
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.invitation_record.refresh_from_db()
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_CANCLED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+        friendship_record = FriendShip.objects.filter(
+            users__in=[self.authenticated_user, self.invited_user]
+        ).first()
+        self.assertIsNone(friendship_record)
+        self.assertEqual(
+            UserFriendShipSettings.objects.filter(
+                invitation=self.invitation_record,
+            ).count(),
+            0,
+        )
+
+    def test_to_ensure_that_non_pending_invitation_record_can_not_be_changed(self):
+        self.invitation_record.status = FriendShipInvitation.INVITATION_STATUS_ACCEPTED
+        self.invitation_record.save()
+
+        # Try changing to pending
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_PENDING}
+        self.client.force_authenticate(self.invited_user)
+
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.invitation_record.refresh_from_db()
+        self.assertEqual(
+            self.invitation_record.status,
+            FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+        )
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+        # Try changing to rejected
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_REJECTED}
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.invitation_record.refresh_from_db()
+        self.assertEqual(
+            self.invitation_record.status,
+            FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+        )
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
+        )
+
+        # try changing to cancled
+        valid_data = {"status": FriendShipInvitation.INVITATION_STATUS_CANCLED}
+        self.client.force_authenticate(self.authenticated_user)
+        response = self.client.patch(data=valid_data, path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.invitation_record.refresh_from_db()
+
+        self.assertEqual(
+            self.invitation_record.status,
+            FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+        )
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.invitation_record.id),
+                    "sent_to": str(self.invited_user.id),
+                    "status": FriendShipInvitation.INVITATION_STATUS_ACCEPTED,
+                    "created_by": str(self.authenticated_user.id),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        self.invitation_record.updated_datetime
+                    ),
+                },
+            },
         )

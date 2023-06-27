@@ -1,5 +1,6 @@
 import random
 import uuid
+from unittest.mock import MagicMock
 
 from dateutil.relativedelta import relativedelta
 from django.core import signing
@@ -13,6 +14,7 @@ from tests.accounts.test_models import (
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
+    FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
     RestPasswordRequestSerializer,
@@ -514,5 +516,99 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
                 "lable": "Invalid password.",
+            },
+        ]
+
+
+class FriendshipInvitationSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = FriendshipInvitationSerializer
+
+    REQUIRED_FIELDS = ["sent_to"]
+    NON_REQUIRED_FIELDS = [
+        "id",
+        "status",
+        "created_by",
+        "created_datetime",
+        "updated_datetime",
+    ]
+
+    def setUp(self) -> None:
+        authenticated_user = UserModelFactory.create(
+            email="email1@example.com",
+        )
+        invited_user = UserModelFactory.create(
+            email="email2@example.com",
+        )
+
+        inactive_user = UserModelFactory.create(
+            is_active=False, email="email3@example.com"
+        )
+
+        unverified_user = UserModelFactory.create(
+            is_verified=False, email="email4@example.com"
+        )
+
+        request = MagicMock()
+        request.user = authenticated_user
+
+        # Test data for sending invitation
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "status": 0,
+                    "sent_to": str(invited_user.id),
+                },
+                "lable": "Test valid data",
+                "context": {"request": request},
+            },
+            {
+                "data": {"sent_to": str(invited_user.id)},
+                "lable": "Test valid data",
+                "context": {"request": request},
+            },
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "status": 5,
+                    "sent_to": str(invited_user.id),
+                },
+                "lable": "Test invalid status",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "status": 0,
+                    "sent_to": str(uuid.uuid4()),
+                },
+                "lable": "Test invalid user",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "status": 0,
+                    "sent_to": str(authenticated_user.id),
+                },
+                "lable": "Test invalid user. Can not send invitation to yourself.",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "status": 0,
+                    "sent_to": str(inactive_user.id),
+                },
+                "lable": "Test invalid user. Can invite inactive user.",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "status": 0,
+                    "sent_to": str(unverified_user.id),
+                },
+                "lable": "Test invalid user. Can invite unverifeid user.",
+                "context": {"request": request},
             },
         ]
