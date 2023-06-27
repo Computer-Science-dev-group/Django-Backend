@@ -8,7 +8,6 @@ from rest_framework.response import Response
 
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
-    CustomUserSerializer,
     EmailVerificationSerializer,
     FollowsSerializer,
     LoginSerializer,
@@ -180,7 +179,7 @@ class FollowAPIView(generics.CreateAPIView):
             )
 
         if self.request.user.id != user_to.id:
-            data = {"user_from": self.request.user, "user_to": user_to}
+            data = {"user_from": self.request.user.id, "user_to": user_to.id}
             serializer = FollowsSerializer(data=data)
 
             if serializer.is_valid():
@@ -197,7 +196,7 @@ class FollowAPIView(generics.CreateAPIView):
                 return Response(
                     {
                         "info": "Failure",
-                        "message": f"You already follow {user_to.get_full_name()}.",
+                        "message": f"You are already a follower of {user_to.get_full_name()}.",
                     },
                     status=status.HTTP_200_OK,
                 )
@@ -205,7 +204,7 @@ class FollowAPIView(generics.CreateAPIView):
             return Response(
                 {
                     "info": "Failure",
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                    "message": f"You cannot follow {user_to.get_full_name()} (yourself).",
                 },
                 status=status.HTTP_40O_BAD_REQUEST,
             )
@@ -247,62 +246,46 @@ class UnFollowAPIView(generics.RetrieveUpdateAPIView):
 
         if self.request.user.id != user_to.id:
             follow_relationship = Follows.objects.filter(
-                user_from=self.request.user, user_to=user_to
+                user_from=self.request.user.id, user_to=user_to.id
             ).first()
 
             if follow_relationship:
-                serializer = FollowsSerializer(follow_relationship)
+                follow_relationship.delete()
 
-                if serializer.is_valid():
-                    follow_relationship.delete()
-
-                    return Response(
-                        {
-                            "info": "Success",
-                            "message": f"You unfollowed {user_to.get_full_name()} successfully.",
-                        },
-                        status=status.HTTP_200_OK,
-                    )
-                else:
-                    return Response(
-                        {
-                            "info": "Failure",
-                            "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
-                        },
-                        status=status.HTTP_40O_BAD_REQUEST,
-                    )
+                return Response(
+                    {
+                        "info": "Success",
+                        "message": f"You unfollowed {user_to.get_full_name()} successfully.",
+                    },
+                    status=status.HTTP_200_OK,
+                )
+            else:
+                return Response(
+                    {
+                        "info": "Failure",
+                        "message": f"You are not a follower of {user_to.get_full_name()}.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
         else:
             return Response(
                 {
                     "info": "Failure",
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                    "message": f"You cannot unfollow {user_to.get_full_name()} (yourself).",
                 },
                 status=status.HTTP_40O_BAD_REQUEST,
             )
 
 
-class FollowerListAPIView(generics.RetrieveAPIView):
-    serializer_class = CustomUserSerializer
+class FollowerAndFollowingCountAPIView(generics.RetrieveAPIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request: Request) -> Response:
-        user = request.user
-        followers = user.get_followers()
-        # followers_count = user.get_followers_count()
-        serializer = self.get_serializer(followers, many=True)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-
-class FollowingListAPIView(generics.RetrieveAPIView):
-    serializer_class = CustomUserSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request: Request) -> Response:
-        user = request.user
-        following = user.get_following()
-        # following_count = user.get_following_count()
-        serializer = self.get_serializer(following, many=True)
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
+        user = self.request.user
+        followers_count = Follows.objects.filter(user_to=user.id).count()
+        following_count = Follows.objects.filter(user_from=user.id).count()
+        data = {"followers_count": followers_count, "following_count": following_count}
+        return Response(data=data, status=status.HTTP_200_OK)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):

@@ -4,8 +4,7 @@ from uia_backend.accounts.api.v1.views import (
     ChangePasswordAPIView,
     EmailVerificationAPIView,
     FollowAPIView,
-    FollowerListAPIView,
-    FollowingListAPIView,
+    FollowerAndFollowingCountAPIView,
     LoginAPIView,
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
@@ -43,6 +42,9 @@ urlpatterns = [
     path(
         "me/unfollow/<uuid:user_id>/", UnFollowAPIView.as_view(), name="user_unfollow"
     ),
-    path("me/followers/", FollowerListAPIView.as_view(), name="user_followers_list"),
-    path("me/following/", FollowingListAPIView.as_view(), name="user_following_list"),
+    path(
+        "me/followers-following/count/",
+        FollowerAndFollowingCountAPIView.as_view(),
+        name="user_followers_and_following_count"
+    ),
 ]

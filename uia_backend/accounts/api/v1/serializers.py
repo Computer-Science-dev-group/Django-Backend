@@ -176,9 +176,6 @@ class CustomUserSerializer(serializers.ModelSerializer):
 
 
 class FollowsSerializer(serializers.ModelSerializer):
-    user_from = CustomUserSerializer(read_only=True)
-    user_to = CustomUserSerializer(read_only=True)
-
     class Meta:
         model = Follows
         fields = ["user_from", "user_to"]

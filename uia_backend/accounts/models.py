@@ -78,34 +78,8 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-    def follow(self, user):
-        """Create a follow relationship between two users"""
-        follow, created = Follows.objects.get_or_create(user_from=self, user_to=user)
-        return created
-
-    def unfollow(self, user):
-        """Remove a follow relationship between two users"""
-        Follows.objects.filter(user_from=self, user_to=user).delete()
-
-    def is_following(self, user):
-        """Check if self is following user"""
-        return Follows.objects.filter(user_from=self, user_to=user).exists()
-
-    def get_followers(self):
-        """Get the followers of self"""
-        return CustomUser.objects.filter(follows__user_to=self)
-
-    def get_followers_count(self):
-        """Get the followers of self count"""
-        return CustomUser.objects.filter(follows__user_to=self).count()
-
-    def get_following(self):
-        """Get the users followed by self"""
-        return CustomUser.objects.filter(followers__user_from=self)
-
-    def get_following_count(self):
-        """Get the users followed by self"""
-        return CustomUser.objects.filter(followers__user_from=self).count()
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
 
 class Follows(models.Model):
