@@ -5,15 +5,12 @@ from uia_backend.accounts.api.v1.views import (
     EmailVerificationAPIView,
     FollowAPIView,
     FollowerAndFollowingCountAPIView,
-    LoginAPIView,
-    ResetPasswordAPIView,
-    ResetPasswordRequestAPIView,
-    UnFollowAPIView,
     FriendShipInvitationDetailAPIView,
     FriendShipInvitationListAPIView,
     LoginAPIView,
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
+    UnFollowAPIView,
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
@@ -52,7 +49,8 @@ urlpatterns = [
     path(
         "me/followers-following/count/",
         FollowerAndFollowingCountAPIView.as_view(),
-        name="user_followers_and_following_count"
+        name="user_followers_and_following_count",
+    ),
     path(
         "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"
     ),

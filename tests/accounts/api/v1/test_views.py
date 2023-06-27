@@ -230,14 +230,28 @@ class EmailVerificationAPIViewTests(APITestCase):
 class UserFollowAndUnFollowAPIViewTests(APITestCase):
     def setUp(self):
         self.user_1 = UserModelFactory.create(
-            first_name='John', last_name='Doe', email='johndoe@example.com', is_active=True, is_verified=True
+            first_name='John',
+            last_name='Doe',
+            email='johndoe@example.com',
+            is_active=True,
+            is_verified=True
         )
         self.user_2 = UserModelFactory.create(
-            first_name='Jane', last_name='Doe', email='janedoe@example.com', is_active=True, is_verified=True
+            first_name='Jane',
+            last_name='Doe',
+            email='janedoe@example.com',
+            is_active=True,
+            is_verified=True
         )
-        self.follow_url = reverse("accounts_api_v1:user_follow", kwargs={'user_id': self.user_2.id})
-        self.unfollow_url = reverse("accounts_api_v1:user_unfollow", kwargs={'user_id': self.user_2.id})
-        self.followers_and_following_count_url = reverse("accounts_api_v1:user_followers_and_following_count")
+        self.follow_url = reverse(
+            "accounts_api_v1:user_follow", kwargs={'user_id': self.user_2.id}
+        )
+        self.unfollow_url = reverse(
+            "accounts_api_v1:user_unfollow", kwargs={'user_id': self.user_2.id}
+        )
+        self.followers_and_following_count_url = reverse(
+            "accounts_api_v1:user_followers_and_following_count"
+        )
 
     def test_unauthenticated_user_cannot_follow(self):
         """Test if an unauthenticated user can follow other users."""

@@ -21,12 +21,12 @@ from uia_backend.accounts.api.v1.serializers import (
     VerifyResetPasswordOTPSerializer,
 )
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
-from uia_backend.accounts.models import ( 
-  CustomUser, 
-  Follows, 
-  FriendShipInvitation, 
-  UserFriendShipSettings,
-)  
+from uia_backend.accounts.models import (
+    CustomUser,
+    Follows,
+    FriendShipInvitation,
+    UserFriendShipSettings,
+)
 
 
 class UserRegistrationAPIView(generics.CreateAPIView):
