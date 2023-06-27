@@ -101,6 +101,8 @@ class ClusterInvitationSerializer(serializers.ModelSerializer):
     def update(
         self, instance: ClusterInvitation, validated_data: dict[str, Any]
     ) -> ClusterInvitation:
+        """Update cluster invitation."""
+        # we want to ensure only invitation status can be updated
         validated_data.pop("user", None)
         return super().update(instance, validated_data)
 

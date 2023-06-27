@@ -135,3 +135,45 @@ class PasswordResetAttempt(BaseAbstractModel):
         """Generate a signed value containg the id of a record."""
         signer = signing.TimestampSigner()
         return signer.sign(value=self.id)
+
+
+class FriendShipInvitation(BaseAbstractModel):
+    INVITATION_STATUS_PENDING = 0
+    INVITATION_STATUS_ACCEPTED = 1
+    INVITATION_STATUS_REJECTED = 2
+    INVITATION_STATUS_CANCLED = 3
+
+    INVITATION_STATUS_CHOICES = (
+        (INVITATION_STATUS_PENDING, "Pending"),
+        (INVITATION_STATUS_ACCEPTED, "Accepted"),
+        (INVITATION_STATUS_REJECTED, "Rejected"),
+        (INVITATION_STATUS_CANCLED, "Cancled"),
+    )
+
+    user = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="friendship_invitations"
+    )
+    status = models.IntegerField(
+        choices=INVITATION_STATUS_CHOICES, default=INVITATION_STATUS_PENDING
+    )
+    created_by = models.ForeignKey(
+        CustomUser, on_delete=models.CASCADE, related_name="friendship_invitation_set"
+    )
+
+
+class FriendShip(BaseAbstractModel):
+    users = models.ManyToManyField(
+        CustomUser,
+        through="accounts.UserFriendShipSettings",
+    )
+
+
+class UserFriendShipSettings(BaseAbstractModel):
+    """Model to allow user control over friendship."""
+
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    friendship = models.ForeignKey(FriendShip, on_delete=models.CASCADE)
+    invitation = models.ForeignKey(
+        "accounts.FriendShipInvitation", on_delete=models.CASCADE
+    )
+    is_blocked = models.BooleanField(default=False)
