@@ -173,6 +173,66 @@ class ClusterListCreateAPIViewTests(APITestCase):
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
 
+    def test_list_user_clusters_with_matching_result(self):
+        """Test list users cluster when user has matching result with the query parameter."""
+        user_cluster = ClusterFactory.create(title="A cluster I joined")
+        ClusterMembershipFactory.create(cluster=user_cluster, user=self.user)
+
+        internal_cluster = ClusterFactory.create(
+            title="Global",
+            internal_cluster=InternalClusterFactory.create(name="global"),
+        )
+        ClusterMembershipFactory.create(cluster=internal_cluster, user=self.user)
+
+        # some cluster that user is not part of
+        user_cluster_two = ClusterFactory.create(title="A new test")
+        ClusterMembershipFactory.create(cluster=user_cluster_two, user=self.user)
+        query_params = {
+            "search": "A clu",
+        }
+        url_with_params = f"{self.url}?{urlencode(query_params)}"
+        response = self.client.get(path=url_with_params)
+        expected_data = {
+            "status": "Success",
+            "code": 200,
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "data": [
+                {
+                    "id": str(user_cluster.id),
+                    "title": user_cluster.title,
+                    "description": user_cluster.description,
+                    "icon": user_cluster.icon,
+                    "created_by": None,
+                    "is_default": False,
+                },
+            ],
+        }
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), expected_data)
+
+    def test_list_cluster_with_no_results(self):
+        """Test list cluster with no results."""
+        user_cluster = ClusterFactory.create(title="Unknown")
+        ClusterMembershipFactory.create(cluster=user_cluster, user=self.user)
+        query_params = {
+            "search": "Not Existing",
+        }
+        url_with_params = f"{self.url}?{urlencode(query_params)}"
+        expected_data = {
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "status": "Success",
+            "code": 200,
+            "data": [],
+        }
+        response = self.client.get(path=url_with_params)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_data)
+
     def test_create_cluster_sucessfully(self):
         data = {
             "title": "string",

@@ -8,7 +8,8 @@ from django.db.models.expressions import RawSQL
 from django.db.models.query import QuerySet
 from django.db.utils import Error
 from django.http import Http404
-from django.shortcuts import get_object_or_404, render
+from django.shortcuts import get_object_or_404
+from django.db.models import Q
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
@@ -407,6 +408,23 @@ class UserFriendShipsDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             id=self.kwargs["pk"],
             user=self.request.user,
         )
+
+
+class UserProfileSearchView(generics.ListAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.kwargs.get("name")
+        queryset = queryset.filter(
+            Q(first_name__startswith=name) | Q(last_name__startswith=name)
+        ).distinct()
+        return queryset
+
+    @method_decorator(cache_page(CACHE_DURATION))
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().get(request, *args, **kwargs)
 
 
 # NOTE (Joseph): This view only work on posgres DB (We need to find a better implementation)
