@@ -152,3 +152,8 @@ class UserFriendShipSettings(BaseAbstractModel):
         "accounts.FriendShipInvitation", on_delete=models.CASCADE
     )
     is_blocked = models.BooleanField(default=False)
+
+
+class UserHandle(BaseAbstractModel):
+    custom_user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    user_handle = models.CharField(max_length=40, unique=True)

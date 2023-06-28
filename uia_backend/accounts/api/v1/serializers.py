@@ -23,6 +23,7 @@ from uia_backend.accounts.utils import (
     send_password_reset_otp_email_notification,
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
+    user_handle,
 )
 from uia_backend.cluster.utils import ClusterManager
 
@@ -82,6 +83,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(validated_data["password"])
         user.save(update_fields=["password"])
         password_changed(user=user, password=validated_data["password"])
+        user_handle(
+            user,
+            validated_data["first_name"],
+            validated_data["last_name"],
+            constants.HANDLE_CREATION,
+        )
         send_user_registration_email_verification_mail(
             user, request=self.context["request"]
         )
@@ -168,6 +175,15 @@ class UserProfileSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+
+        # Below is for changing user handle due to change in either first_name or last_name
+        user = self.context["request"].user
+        user_handle(
+            user,
+            validated_data["first_name"],
+            validated_data["last_name"],
+            constants.HANDLE_UPDATE,
+        )
         return instance
 
 

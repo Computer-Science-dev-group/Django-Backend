@@ -16,6 +16,7 @@ from tests.accounts.test_models import (
     FriendShipInvitationFactory,
     PasswordResetAttemptFactory,
     UserFriendShipSettingsFactory,
+    UserHandleFactory,
     UserModelFactory,
 )
 from uia_backend.accounts.constants import (
@@ -231,6 +232,9 @@ class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")
         self.user = UserModelFactory.create(is_active=True, is_verified=True)
+        self.user_handle = UserHandleFactory(
+            custom_user=self.user,
+        )
 
     def test_unauthenticated_user_can_view_profile(self):
         """Test if an unauthenticated user can view profile."""
