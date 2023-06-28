@@ -1,14 +1,19 @@
 from typing import Any
 
 from django.db import transaction
-from django.db.models.query import Q, QuerySet
+from django.db.models import Q
+from django.db.models.query import QuerySet
 from django.http import Http404
 from django.shortcuts import get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views.decorators.cache import cache_page
+from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from rest_framework import generics, permissions, status
+from rest_framework import filters, generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
+from config.settings.base import CACHE_DURATION
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
@@ -22,7 +27,11 @@ from uia_backend.accounts.api.v1.serializers import (
     VerifyResetPasswordOTPSerializer,
 )
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
-from uia_backend.accounts.models import FriendShipInvitation, UserFriendShipSettings
+from uia_backend.accounts.models import (
+    CustomUser,
+    FriendShipInvitation,
+    UserFriendShipSettings,
+)
 
 
 class UserRegistrationAPIView(generics.CreateAPIView):
@@ -235,6 +244,18 @@ class ResetPasswordAPIView(generics.GenericAPIView):
         return Response(serializer.data)
 
 
+class UserProfileListView(generics.ListAPIView):
+    queryset = CustomUser.objects.filter(is_active=True)
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    search_fields = ["first_name", "last_name"]
+
+    @method_decorator(cache_page(CACHE_DURATION))
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().get(request, *args, **kwargs)
+
+
 class FriendShipInvitationListAPIView(generics.ListCreateAPIView):
     serializer_class = FriendshipInvitationSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -295,3 +316,20 @@ class UserFriendShipsDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             id=self.kwargs["pk"],
             user=self.request.user,
         )
+
+
+class UserProfileSearchView(generics.ListAPIView):
+    queryset = CustomUser.objects.all()
+    serializer_class = UserProfileSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        name = self.kwargs.get("name")
+        queryset = queryset.filter(
+            Q(first_name__startswith=name) | Q(last_name__startswith=name)
+        ).distinct()
+        return queryset
+
+    @method_decorator(cache_page(CACHE_DURATION))
+    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().get(request, *args, **kwargs)
