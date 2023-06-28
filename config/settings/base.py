@@ -304,6 +304,8 @@ REST_FRAMEWORK = {
         "uia_backend.libs.renderers.CustomRenderer",
         "rest_framework.renderers.JSONRenderer",
     ],
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 50,
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup

@@ -1042,6 +1042,9 @@ class FriendShipInvitationListAPIViewTests(APITestCase):
             {
                 "status": "Success",
                 "code": 200,
+                "count": 2,
+                "next": None,
+                "previous": None,
                 "data": [
                     {
                         "id": str(record_1.id),
