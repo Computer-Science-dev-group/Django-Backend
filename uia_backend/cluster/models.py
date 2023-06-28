@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from django.db import models
 
 from uia_backend.accounts.models import CustomUser
@@ -59,7 +61,10 @@ class ClusterInvitation(BaseAbstractModel):
     status = models.IntegerField(
         choices=INVITATION_STATUS_CHOICES, default=INVITATION_STATUS_PENDING
     )
-    duration = models.PositiveIntegerField(help_text="Duration in days.", default=1)
+    duration = models.DurationField(
+        help_text="Duration in days.",
+        default=timedelta(days=1),
+    )
     created_by = models.ForeignKey(
         CustomUser, on_delete=models.PROTECT, related_name="cluster_invitation_set"
     )

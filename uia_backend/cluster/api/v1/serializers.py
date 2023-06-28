@@ -1,4 +1,5 @@
 import logging
+from datetime import timedelta
 from typing import Any
 
 from rest_framework import serializers
@@ -61,7 +62,12 @@ class ClusterSerializer(serializers.ModelSerializer):
 
 
 class ClusterInvitationSerializer(serializers.ModelSerializer):
-    duration = serializers.IntegerField(min_value=1, max_value=10, required=True)
+    duration = serializers.IntegerField(
+        min_value=1,
+        max_value=10,
+        required=True,
+        source="duration.days",
+    )
 
     class Meta:
         model = ClusterInvitation
@@ -97,6 +103,14 @@ class ClusterInvitationSerializer(serializers.ModelSerializer):
                 return_status = value
 
         return return_status
+
+    def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
+        if "duration" in attrs.keys():
+            # NOTE: Joseph: Na beans if you know you know
+            # Had to use this to cast duration.days to duration during validation
+            attrs["duration"] = timedelta(days=attrs["duration"]["days"])
+
+        return super().validate(attrs)
 
     def update(
         self, instance: ClusterInvitation, validated_data: dict[str, Any]

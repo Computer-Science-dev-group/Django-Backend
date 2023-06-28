@@ -23,5 +23,10 @@ CELERYBEAT_SCHEDULE = {
     "deactivate_expired_email_verification_records": {
         "task": "deactivate_expired_email_verification_records",
         "schedule": crontab(hour="*/6"),
-    }
+    },
+    # Deactivate expired user invitation records runs every 6 hours
+    "deactivate_expired_cluster_invitation": {
+        "task": "deactivate_expired_cluster_invitation",
+        "schedule": crontab(hour="*/24"),
+    },
 }
