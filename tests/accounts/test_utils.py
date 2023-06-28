@@ -9,7 +9,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.request import Request
 
-from tests.accounts.test_models import UserModelFactory
+from tests.accounts.test_models import UserHandleFactory, UserModelFactory
 from uia_backend.accounts import constants as account_constants
 from uia_backend.accounts.models import EmailVerification
 from uia_backend.accounts.utils import (
@@ -17,6 +17,7 @@ from uia_backend.accounts.utils import (
     get_location_from_ip,
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
+    user_handle,
 )
 
 
@@ -232,3 +233,85 @@ class GenerateResetPasswordOtpTests(TestCase):
 
         self.assertEqual(otp, "123456")
         self.assertEqual(signer.unsign(signed_otp), "123456")
+
+
+class GenerateUserHandle(TestCase):
+    def setUp(self) -> None:
+        self.user1 = UserModelFactory.create(email="user1@example.com")
+        self.user2 = UserModelFactory.create(
+            first_name="james", last_name="josh", email="user2@example.com"
+        )
+
+    def test_creation_of_user_handle_when_no_similar_handle_exists(self):
+        """This test if handle is created for a user"""
+        expected_handle = "@james_josh"
+        generated_handle = user_handle(
+            self.user2,
+            self.user2.first_name,
+            self.user2.last_name,
+            account_constants.HANDLE_CREATION,
+        )
+        self.assertIsNotNone(generated_handle)
+        self.assertEqual(generated_handle, expected_handle)
+        self.assertIsNotNone(self.user2.userhandle)
+        self.assertEqual(self.user2.userhandle.user_handle, generated_handle)
+
+    def test_creation_of_user_handle_when_similar_handle_exists(self):
+        """ "This test if a different handle is created for a user when similar handle exist"""
+        existing_user_handle = UserHandleFactory.create(
+            custom_user=self.user1, user_handle="@james_josh"
+        )
+        expected_user_handle = "@james_josh12345"
+        with mock.patch(
+            "uia_backend.accounts.utils.random.randrange", side_effect=[12345]
+        ):
+            generated_handle = user_handle(
+                self.user2,
+                self.user2.first_name,
+                self.user2.last_name,
+                account_constants.HANDLE_CREATION,
+            )
+        self.assertNotEqual(existing_user_handle, generated_handle)
+        self.assertEqual(expected_user_handle, generated_handle)
+        self.assertIsNotNone(self.user2.userhandle)
+        self.assertEqual(self.user2.userhandle.user_handle, generated_handle)
+
+    def test_user_handle_when_profile_is_updated_when_no_similar_handle_exists(self):
+        """This test if a user can update their handle when profile is changed"""
+
+        UserHandleFactory.create(custom_user=self.user2, user_handle="@james_josh")
+        self.user2.first_name, self.user2.last_name = "delight", "brown"
+        self.user2.save()
+        expected_user_handle = "@delight_brown"
+        generated_handle = user_handle(
+            self.user2,
+            self.user2.first_name,
+            self.user2.last_name,
+            account_constants.HANDLE_UPDATE,
+        )
+        self.assertIsNotNone(generated_handle)
+        self.assertEqual(generated_handle, expected_user_handle)
+        self.assertIsNotNone(self.user2.userhandle)
+        self.user2.userhandle.refresh_from_db()
+        self.assertEqual(self.user2.userhandle.user_handle, generated_handle)
+
+    def test_user_handle_when_profile_is_updated_and_handle_exists(self):
+        """ "This test if a user can update their handle when profile is changed and handle exist"""
+        existing_user_handle = UserHandleFactory(
+            custom_user=self.user1, user_handle="@james_josh"
+        )
+        expected_user_handle = "@james_josh12345"
+
+        with mock.patch(
+            "uia_backend.accounts.utils.random.randrange", side_effect=[12345]
+        ):
+            generated_handle = user_handle(
+                self.user2,
+                self.user2.first_name,
+                self.user2.last_name,
+                account_constants.HANDLE_CREATION,
+            )
+        self.assertNotEqual(existing_user_handle, generated_handle)
+        self.assertEqual(expected_user_handle, generated_handle)
+        self.assertIsNotNone(self.user2.userhandle)
+        self.assertEqual(self.user2.userhandle.user_handle, generated_handle)
