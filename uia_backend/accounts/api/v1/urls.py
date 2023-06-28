@@ -75,5 +75,6 @@ urlpatterns = [
     path(
         "me/friendships/invitations/<uuid:pk>/",
         FriendShipInvitationDetailAPIView.as_view(),
-    ),   name="friendship_invitation_detail",
+        name="friendship_invitation_detail",
+    ),
 ]

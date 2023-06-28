@@ -38,6 +38,7 @@ from uia_backend.accounts.models import (
     UserFriendShipSettings,
 )
 
+
 class UserRegistrationAPIView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
     permission_classes = [permissions.AllowAny]
@@ -265,7 +266,7 @@ class FollowerCountAPIView(generics.RetrieveAPIView):
                 },
             )
         ]
-    ) 
+    )
     def get(self, request, *args, **kwargs) -> Response:
         """Retrieve a user follower's count by id"""
 
@@ -299,7 +300,7 @@ class FollowingCountAPIView(generics.RetrieveAPIView):
                 },
             )
         ]
-    ) 
+    )
     def get(self, request, *args, **kwargs) -> Response:
         """Retrieve a user following's count by id"""
 
