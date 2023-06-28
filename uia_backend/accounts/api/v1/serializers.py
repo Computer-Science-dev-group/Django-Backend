@@ -148,6 +148,8 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for the Custom User Profile"""
 
+    handle = serializers.CharField(source="userhandle__user_handle", read_only=True)
+
     class Meta:
         model = CustomUser
         fields = [
@@ -163,8 +165,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "bio",
             "gender",
             "date_of_birth",
+            "handle",
         ]
-        read_only_fields = ["year_of_graduation", "department", "faculty"]
+        read_only_fields = ["year_of_graduation", "department", "faculty", "handle"]
 
     def update(
         self, instance: CustomUser, validated_data: dict[str, Any]
@@ -185,6 +188,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
             constants.HANDLE_UPDATE,
         )
         return instance
+
+    def to_representation(self, instance: Any) -> Any:
+        data = super().to_representation(instance)
+        data["handle"] = (
+            instance.userhandle.user_handle if hasattr(instance, "userhandle") else None
+        )
+        return data
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):

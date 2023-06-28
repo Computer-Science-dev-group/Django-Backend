@@ -67,6 +67,7 @@ class NotificationListAPIViewTests(APITestCase):
             "bio": self.user.bio,
             "gender": self.user.gender,
             "date_of_birth": self.user.date_of_birth.isoformat(),
+            "handle": None,
         }
 
         response = self.client.get(path=self.url)
@@ -146,6 +147,7 @@ class NotificationDetailAPIViewTests(APITestCase):
             "bio": self.user.bio,
             "gender": self.user.gender,
             "date_of_birth": self.user.date_of_birth.isoformat(),
+            "handle": None,
         }
         self.url = reverse(
             "notification_api_v1:notification_details",

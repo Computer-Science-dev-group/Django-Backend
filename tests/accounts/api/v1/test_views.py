@@ -263,6 +263,7 @@ class UserProfileAPIViewTests(APITestCase):
                 "display_name": self.user.display_name,
                 "phone_number": self.user.phone_number,
                 "date_of_birth": self.user.date_of_birth.isoformat(),
+                "handle": f"@{self.user.first_name.lower()}_{self.user.last_name.lower()}",
             },
         )
 
@@ -303,6 +304,7 @@ class UserProfileAPIViewTests(APITestCase):
                 "cover_photo": None,
                 "profile_picture": None,
                 "year_of_graduation": user_data["year_of_graduation"],
+                "handle": f"@{user_data['first_name'].lower()}_{user_data['last_name'].lower()}",
             },
         )
 
