@@ -18,6 +18,7 @@ from uia_backend.accounts.api.v1.serializers import (
     LoginSerializer,
     ResetPasswordSerializer,
     RestPasswordRequestSerializer,
+    UserFriendShipSettingsSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyResetPasswordOTPSerializer,
@@ -612,3 +613,36 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                 "context": {"request": request},
             },
         ]
+
+
+class UserFriendShipSettingsSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = UserFriendShipSettingsSerializer
+
+    REQUIRED_FIELDS = []
+
+    NON_REQUIRED_FIELDS = [
+        "id",
+        "users",
+        "is_blocked",
+        "created_datetime",
+        "updated_datetime",
+    ]
+
+    VALID_DATA = [
+        {
+            "data": {
+                "is_blocked": True,
+            },
+            "lable": "Test valid data",
+        },
+        {
+            "data": {
+                "is_blocked": False,
+            },
+            "lable": "Test valid data",
+        },
+    ]
+
+    INVALID_DATA = []

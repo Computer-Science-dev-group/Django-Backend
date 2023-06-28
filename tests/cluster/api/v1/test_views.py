@@ -50,6 +50,9 @@ class ClusterListCreateAPIViewTests(APITestCase):
         expected_data = {
             "status": "Success",
             "code": 200,
+            "count": 2,
+            "next": None,
+            "previous": None,
             "data": [
                 {
                     "id": str(user_cluster.id),
@@ -79,7 +82,14 @@ class ClusterListCreateAPIViewTests(APITestCase):
         ClusterFactory.create(title="Unknown")
 
         response = self.client.get(path=self.url)
-        expected_data = {"status": "Success", "code": 200, "data": []}
+        expected_data = {
+            "status": "Success",
+            "code": 200,
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "data": [],
+        }
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), expected_data)
 
@@ -327,6 +337,9 @@ class ClusterMembershipListAPIViewTests(APITestCase):
         expected_data = {
             "status": "Success",
             "code": 200,
+            "count": 2,
+            "next": None,
+            "previous": None,
             "data": [
                 {
                     "id": str(self.membership.id),
@@ -371,7 +384,6 @@ class ClusterMembershipListAPIViewTests(APITestCase):
 
         response = self.client.get(path=url)
         self.assertEqual(response.status_code, 200)
-
         self.assertDictEqual(
             response.json(),
             expected_data,
@@ -707,6 +719,9 @@ class ClusterInvitationListAPIViewTests(APITestCase):
         expected_data = {
             "status": "Success",
             "code": 200,
+            "count": 1,
+            "next": None,
+            "previous": None,
             "data": [
                 {
                     "id": str(invitation_record.id),
@@ -1053,6 +1068,9 @@ class UserClusterInvitationListAPIViewTests(APITestCase):
         expected_data = {
             "status": "Success",
             "code": 200,
+            "count": 1,
+            "next": None,
+            "previous": None,
             "data": [
                 {
                     "id": str(invitation.id),

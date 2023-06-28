@@ -2,6 +2,8 @@ from typing import Any
 
 from django.db import transaction
 from django.db.models.query import Q, QuerySet
+from django.http import Http404
+from django.shortcuts import get_object_or_404
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import generics, permissions, status
 from rest_framework.request import Request
@@ -256,6 +258,17 @@ class FriendShipInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
             Q(created_by=self.request.user) | Q(user=self.request.user)
         ).select_related("user", "created_by")
 
+    def get_object(self) -> FriendShipInvitation:
+        """Get object"""
+        try:
+            record = FriendShipInvitation.objects.filter(
+                Q(created_by=self.request.user) | Q(user=self.request.user)
+            ).get(id=self.kwargs["pk"])
+        except FriendShipInvitation.DoesNotExist:
+            raise Http404
+
+        return record
+
 
 class UserFriendShipsListAPIView(generics.ListAPIView):
     serializer_class = UserFriendShipSettingsSerializer
@@ -274,3 +287,11 @@ class UserFriendShipsDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
 
     def perform_destroy(self, instance: UserFriendShipSettings) -> None:
         instance.friendship.delete()
+
+    def get_object(self) -> UserFriendShipSettings:
+        """Get object"""
+        return get_object_or_404(
+            UserFriendShipSettings,
+            id=self.kwargs["pk"],
+            user=self.request.user,
+        )

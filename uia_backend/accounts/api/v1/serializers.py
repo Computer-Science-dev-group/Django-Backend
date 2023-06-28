@@ -534,9 +534,10 @@ class UserFriendShipSettingsSerializer(serializers.ModelSerializer):
     users = serializers.ListField(
         child=serializers.PrimaryKeyRelatedField(read_only=True),
         source="friendship__users",
+        read_only=True,
     )
 
     class Meta:
         model = UserFriendShipSettings
         fields = ["id", "is_blocked", "users", "created_datetime", "updated_datetime"]
-        read_only_fields = ["id", "created_datetime", "updated_datetime"]
+        read_only_fields = ["id", "users", "created_datetime", "updated_datetime"]
