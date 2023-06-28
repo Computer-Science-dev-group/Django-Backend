@@ -181,6 +181,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
         "year_of_graduation",
         "department",
         "faculty",
+        "handle",
     ]
 
     VALID_DATA = [

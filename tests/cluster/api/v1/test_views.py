@@ -357,6 +357,7 @@ class ClusterMembershipListAPIViewTests(APITestCase):
                         "bio": self.user.bio,
                         "gender": self.user.gender,
                         "date_of_birth": self.user.date_of_birth.isoformat(),
+                        "handle": None,
                     },
                 },
                 {
@@ -374,6 +375,7 @@ class ClusterMembershipListAPIViewTests(APITestCase):
                         "bio": member_1.bio,
                         "gender": member_1.gender,
                         "date_of_birth": member_1.date_of_birth.isoformat(),
+                        "handle": None,
                     },
                 },
             ],
@@ -479,6 +481,7 @@ class ClusterMembersDetailAPIViewTests(APITestCase):
                     "bio": self.user.bio,
                     "gender": self.user.gender,
                     "date_of_birth": self.user.date_of_birth.isoformat(),
+                    "handle": None,
                 },
             },
         }
