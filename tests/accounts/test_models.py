@@ -9,6 +9,7 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     PasswordResetAttempt,
     UserFriendShipSettings,
+    UserHandle,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -101,3 +102,8 @@ class FriendShipFactory(DjangoModelFactory):
 class UserFriendShipSettingsFactory(DjangoModelFactory):
     class Meta:
         model = UserFriendShipSettings
+
+
+class UserHandleFactory(DjangoModelFactory):
+    class Meta:
+        model = UserHandle

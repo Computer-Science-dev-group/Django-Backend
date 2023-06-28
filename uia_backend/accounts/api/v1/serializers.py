@@ -1,4 +1,5 @@
 import logging
+import random
 from datetime import datetime, timedelta
 from typing import Any
 
@@ -17,6 +18,7 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     PasswordResetAttempt,
     UserFriendShipSettings,
+    UserHandle,
 )
 from uia_backend.accounts.utils import (
     generate_reset_password_otp,
@@ -82,6 +84,26 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(validated_data["password"])
         user.save(update_fields=["password"])
         password_changed(user=user, password=validated_data["password"])
+
+        #  Below is for creation of user handle
+        user_handle = (
+            "@" + validated_data["first_name"] + "_" + validated_data["last_name"]
+        )
+        handle = UserHandle.objects.filter(user_handle=user_handle)
+        if handle.exists():
+            random_number = random.randrange(123, 567890)
+            user_handle = (
+                "@"
+                + validated_data["first_name"]
+                + "_"
+                + validated_data["last_name"]
+                + str(random_number)
+            )
+            print(f"user handle is {user_handle} after checking")
+            UserHandle.objects.create(custom_user=user, user_handle=user_handle)
+        else:
+            print(f"user handle is {user_handle}")
+            UserHandle.objects.create(custom_user=user, user_handle=user_handle)
         send_user_registration_email_verification_mail(
             user, request=self.context["request"]
         )
@@ -168,6 +190,28 @@ class UserProfileSerializer(serializers.ModelSerializer):
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
+
+        # Below is for changing user handle due to change in either first_name or last_name
+        user_handle = (
+            "@" + validated_data["first_name"] + "_" + validated_data["last_name"]
+        )
+        handle = UserHandle.objects.filter(user_handle=user_handle)
+        if handle.exists():
+            random_number = random.randrange(1234, 567890)
+            user_handle = (
+                "@"
+                + validated_data["first_name"]
+                + "_"
+                + validated_data["last_name"]
+                + str(random_number)
+            )
+            user = UserHandle.objects.get(custom_user=self.context['request'].user)
+            user.user_handle = user_handle
+            user.save()
+        else:
+            user = UserHandle.objects.get(custom_user=self.context['request'].user)
+            user.user_handle = user_handle
+            user.save()
         return instance
 
 
