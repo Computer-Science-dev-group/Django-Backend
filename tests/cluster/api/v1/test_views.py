@@ -1,4 +1,5 @@
 import uuid
+from datetime import timedelta
 
 from django.test.client import BOUNDARY, MULTIPART_CONTENT, encode_multipart
 from django.urls import reverse
@@ -709,7 +710,7 @@ class ClusterInvitationListAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         url = reverse(
@@ -747,7 +748,7 @@ class ClusterInvitationListAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         url = reverse(
@@ -886,7 +887,7 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         url = reverse(
@@ -920,7 +921,7 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         url = reverse(
@@ -973,7 +974,7 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         url = reverse(
@@ -1014,7 +1015,7 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
             user=user_to_invite,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
 
         another_user = UserModelFactory.create(email="stanger@test.com")
@@ -1063,7 +1064,7 @@ class UserClusterInvitationListAPIViewTests(APITestCase):
             user=self.user,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
         expected_data = {
             "status": "Success",
@@ -1097,7 +1098,7 @@ class UserClusterInvitationDetailAPIView(APITestCase):
             user=self.user,
             created_by=self.user,
             cluster=self.cluster,
-            duration=10,
+            duration=timedelta(days=10),
         )
         self.url = reverse(
             "cluster_api_v1:retrieve_update_user_cluster_invitation",

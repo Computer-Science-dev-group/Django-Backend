@@ -30,3 +30,4 @@ drf-standardized-errors[openapi]==0.12.5 # https://github.com/ghazi-git/drf-stan
 responses==0.23.1 # https://github.com/getsentry/responses
 djangorestframework-simplejwt[crypto]==5.2.2 # https://github.com/jazzband/djangorestframework-simplejwt
 django-guardian==2.4.0 # https://github.com/django-guardian/django-guardian
+freezegun==1.2.2 # https://github.com/spulec/freezegun
