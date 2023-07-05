@@ -18,6 +18,13 @@ urlpatterns = [
             namespace="cluster_api_v1",
         ),
     ),
+    path(
+        "api/v1/notifications/",
+        include(
+            ("uia_backend.notification.api.v1.urls", "notification_api_v1"),
+            namespace="notification_api_v1",
+        ),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS

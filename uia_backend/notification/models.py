@@ -1,6 +1,8 @@
 from django.db import models
+from notifications.base.models import AbstractNotification
 
 from uia_backend.libs.base_models import BaseAbstractModel
+from uia_backend.notification.constants import NOTIFICATION_TYPE_CHOICES
 
 
 class EmailMessageModel(BaseAbstractModel):
@@ -62,3 +64,7 @@ class EmailTrackingModel(BaseAbstractModel):
     metadata = models.JSONField(default=dict)
     rejection_reason = models.CharField(null=True, max_length=100)
     raw_event_data = models.JSONField(default=dict)
+
+
+class NotificationModel(AbstractNotification, BaseAbstractModel):
+    type = models.CharField(choices=NOTIFICATION_TYPE_CHOICES, max_length=50)
