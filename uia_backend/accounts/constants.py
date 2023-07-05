@@ -11,3 +11,7 @@ PASSWORD_RESET_OTP_LENGTH = 6
 EMAIL_VERIFICATION_TEMPLATE_ID = "d-1dda679ebf2846b498b6ab027a4f73b7"
 PASSWORD_CHANGE_TEMPLATE_ID = "d-7cdf816164d64d0791b9b0b6f9a7ffff"
 PASSWORD_RESET_TEMPLATE_ID = "d-3a50ac41a1654b548f8521e1ae40bad4"
+
+# This is for creating or updating user handle
+HANDLE_CREATION = "handle-creation"
+HANDLE_UPDATE = "handle-update"

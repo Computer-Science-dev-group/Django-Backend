@@ -8,82 +8,232 @@ import uuid
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
-        ('accounts', '0001_initial'),
+        ("accounts", "0001_initial"),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Cluster',
+            name="Cluster",
             fields=[
-                ('id', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_datetime', models.DateTimeField(auto_now_add=True, verbose_name='Created at')),
-                ('updated_datetime', models.DateTimeField(auto_now=True, verbose_name='Last update at')),
-                ('title', models.CharField(max_length=100)),
-                ('description', models.TextField(blank=True)),
-                ('icon', models.ImageField(null=True, upload_to=uia_backend.cluster.models.cluster_icon_upload_location)),
-                ('created_by', models.ForeignKey(null=True, on_delete=django.db.models.deletion.PROTECT, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        db_index=True,
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "created_datetime",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Created at"),
+                ),
+                (
+                    "updated_datetime",
+                    models.DateTimeField(auto_now=True, verbose_name="Last update at"),
+                ),
+                ("title", models.CharField(max_length=100)),
+                ("description", models.TextField(blank=True)),
+                (
+                    "icon",
+                    models.ImageField(
+                        null=True,
+                        upload_to=uia_backend.cluster.models.cluster_icon_upload_location,
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.PROTECT,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'permissions': {('view_cluster_permission', 'View a cluster'), ('remove_cluster_member_permission', 'Remove member from cluster'), ('change_cluster_permission', 'Update a cluster'), ('add_cluster_member_permission', 'Add a member to a cluster')},
+                "permissions": {
+                    ("view_cluster_permission", "View a cluster"),
+                    ("remove_cluster_member_permission", "Remove member from cluster"),
+                    ("change_cluster_permission", "Update a cluster"),
+                    ("add_cluster_member_permission", "Add a member to a cluster"),
+                },
             },
         ),
         migrations.CreateModel(
-            name='ClusterInvitation',
+            name="ClusterInvitation",
             fields=[
-                ('id', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_datetime', models.DateTimeField(auto_now_add=True, verbose_name='Created at')),
-                ('updated_datetime', models.DateTimeField(auto_now=True, verbose_name='Last update at')),
-                ('status', models.IntegerField(choices=[(0, 'Pending'), (1, 'Accepted'), (2, 'Rejected'), (3, 'Expired'), (4, 'Cancled')], default=0)),
-                ('duration', models.PositiveIntegerField(default=1, help_text='Duration in days.')),
-                ('cluster', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cluster.cluster')),
-                ('created_by', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='cluster_invitation_set', to=settings.AUTH_USER_MODEL)),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='cluster_invitations', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        db_index=True,
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "created_datetime",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Created at"),
+                ),
+                (
+                    "updated_datetime",
+                    models.DateTimeField(auto_now=True, verbose_name="Last update at"),
+                ),
+                (
+                    "status",
+                    models.IntegerField(
+                        choices=[
+                            (0, "Pending"),
+                            (1, "Accepted"),
+                            (2, "Rejected"),
+                            (3, "Expired"),
+                            (4, "Cancled"),
+                        ],
+                        default=0,
+                    ),
+                ),
+                (
+                    "duration",
+                    models.PositiveIntegerField(
+                        default=1, help_text="Duration in days."
+                    ),
+                ),
+                (
+                    "cluster",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="cluster.cluster",
+                    ),
+                ),
+                (
+                    "created_by",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.PROTECT,
+                        related_name="cluster_invitation_set",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="cluster_invitations",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='InternalCluster',
+            name="InternalCluster",
             fields=[
-                ('id', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_datetime', models.DateTimeField(auto_now_add=True, verbose_name='Created at')),
-                ('updated_datetime', models.DateTimeField(auto_now=True, verbose_name='Last update at')),
-                ('name', models.CharField(db_index=True, editable=False, max_length=100, unique=True)),
-                ('description', models.TextField(default='')),
-                ('is_active', models.BooleanField(default=True)),
+                (
+                    "id",
+                    models.UUIDField(
+                        db_index=True,
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "created_datetime",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Created at"),
+                ),
+                (
+                    "updated_datetime",
+                    models.DateTimeField(auto_now=True, verbose_name="Last update at"),
+                ),
+                (
+                    "name",
+                    models.CharField(
+                        db_index=True, editable=False, max_length=100, unique=True
+                    ),
+                ),
+                ("description", models.TextField(default="")),
+                ("is_active", models.BooleanField(default=True)),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.CreateModel(
-            name='ClusterMembership',
+            name="ClusterMembership",
             fields=[
-                ('id', models.UUIDField(db_index=True, default=uuid.uuid4, editable=False, primary_key=True, serialize=False, unique=True)),
-                ('created_datetime', models.DateTimeField(auto_now_add=True, verbose_name='Created at')),
-                ('updated_datetime', models.DateTimeField(auto_now=True, verbose_name='Last update at')),
-                ('cluster', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='cluster.cluster')),
-                ('invitation', models.ForeignKey(null=True, on_delete=django.db.models.deletion.CASCADE, to='cluster.clusterinvitation')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.UUIDField(
+                        db_index=True,
+                        default=uuid.uuid4,
+                        editable=False,
+                        primary_key=True,
+                        serialize=False,
+                        unique=True,
+                    ),
+                ),
+                (
+                    "created_datetime",
+                    models.DateTimeField(auto_now_add=True, verbose_name="Created at"),
+                ),
+                (
+                    "updated_datetime",
+                    models.DateTimeField(auto_now=True, verbose_name="Last update at"),
+                ),
+                (
+                    "cluster",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="cluster.cluster",
+                    ),
+                ),
+                (
+                    "invitation",
+                    models.ForeignKey(
+                        null=True,
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="cluster.clusterinvitation",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'abstract': False,
+                "abstract": False,
             },
         ),
         migrations.AddField(
-            model_name='cluster',
-            name='internal_cluster',
-            field=models.OneToOneField(null=True, on_delete=django.db.models.deletion.PROTECT, to='cluster.internalcluster'),
+            model_name="cluster",
+            name="internal_cluster",
+            field=models.OneToOneField(
+                null=True,
+                on_delete=django.db.models.deletion.PROTECT,
+                to="cluster.internalcluster",
+            ),
         ),
         migrations.AddField(
-            model_name='cluster',
-            name='members',
-            field=models.ManyToManyField(related_name='cluster_member_set', through='cluster.ClusterMembership', to=settings.AUTH_USER_MODEL),
+            model_name="cluster",
+            name="members",
+            field=models.ManyToManyField(
+                related_name="cluster_member_set",
+                through="cluster.ClusterMembership",
+                to=settings.AUTH_USER_MODEL,
+            ),
         ),
     ]

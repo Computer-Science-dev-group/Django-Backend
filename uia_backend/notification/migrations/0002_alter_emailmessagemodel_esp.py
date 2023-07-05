@@ -4,15 +4,16 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     dependencies = [
-        ('notification', '0001_initial'),
+        ("notification", "0001_initial"),
     ]
 
     operations = [
         migrations.AlterField(
-            model_name='emailmessagemodel',
-            name='esp',
-            field=models.CharField(choices=[(0, 'SendInBlue'), (1, 'SendGrid')], default=0, max_length=100),
+            model_name="emailmessagemodel",
+            name="esp",
+            field=models.CharField(
+                choices=[(0, "SendInBlue"), (1, "SendGrid")], default=0, max_length=100
+            ),
         ),
     ]
