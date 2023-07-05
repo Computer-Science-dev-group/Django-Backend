@@ -36,3 +36,11 @@ class ClusterMembersObjectPermission(CustomAccessPermission):
         "HEAD": [],
         "DELETE": [REMOVE_CLUSTER_MEMBER_PERMISSION],
     }
+
+
+class InternalClusterProtectionPermission(CustomAccessPermission):
+    """Permission to protect internal clusters."""
+
+    perms_map = {
+        "DELETE": ["PROTECT_INTERNAL_CLUSTERS"],
+    }
