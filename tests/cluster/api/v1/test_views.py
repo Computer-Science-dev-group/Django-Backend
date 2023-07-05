@@ -683,6 +683,43 @@ class ClusterMembersDetailAPIViewTests(APITestCase):
             )
         )
 
+    def test_delete_cluster_member__case_5(self):
+        """Test that a user can not be removed from internal clusters."""
+        internal_cluster = InternalClusterFactory.create(name="global")
+        self.cluster.internal_cluster = internal_cluster
+        self.cluster.save()
+
+        url = reverse(
+            "cluster_api_v1:retrieve_delete_cluster_member",
+            args=[str(self.cluster.id), str(self.membership.id)],
+        )
+
+        self.maxDiff = None
+        response = self.client.delete(path=url)
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 403,
+                "data": {
+                    "detail": "You do not have permission to perform this action."
+                },
+            },
+        )
+
+        permissions_to_check = [
+            VIEW_CLUSTER_PERMISSION,
+            ADD_CLUSTER_MEMBER_PERMISSION,
+            REMOVE_CLUSTER_MEMBER_PERMISSION,
+        ]
+
+        self.assertTrue(
+            check_object_permissions(
+                permissions=permissions_to_check, assignee=self.user, obj=self.cluster
+            )
+        )
+
 
 class ClusterInvitationListAPIViewTests(APITestCase):
     def setUp(self) -> None:

@@ -12,6 +12,7 @@ from uia_backend.cluster.api.v1.permissions import (
     ClusterInvitationObjectPermission,
     ClusterMembersObjectPermission,
     ClusterObjectPermission,
+    InternalClusterProtectionPermission,
 )
 from uia_backend.cluster.api.v1.serializers import (
     ClusterInvitationSerializer,
@@ -236,7 +237,10 @@ class ClusterMembershipListAPIView(generics.ListAPIView):
 
 class ClusterMembersDetailAPIView(generics.RetrieveDestroyAPIView):
     serializer_class = ClusterMembershipSerializer
-    permission_classes = [permissions.IsAuthenticated, ClusterMembersObjectPermission]
+    permission_classes = [
+        permissions.IsAuthenticated,
+        ClusterMembersObjectPermission,
+    ]
 
     def get_object(self) -> ClusterMembership:
         membership_record = get_object_or_404(
@@ -244,6 +248,17 @@ class ClusterMembersDetailAPIView(generics.RetrieveDestroyAPIView):
             cluster_id=self.kwargs["cluster_id"],
             id=self.kwargs["membership_id"],
         )
+
+        # if its an internal cluster apply the InternalClusterProtectionPermission
+        # NOTE: This is a crud fix to ensure users can not leave internal clusters
+        if membership_record.cluster.internal_cluster is not None:
+            self.permission_classes = (
+                permissions.IsAuthenticated,
+                InternalClusterProtectionPermission,
+            )
+            self.check_object_permissions(
+                request=self.request, obj=membership_record.cluster
+            )
 
         if membership_record.user == self.request.user:
             # we want to ensure that user can delete their own membership data

@@ -37,7 +37,6 @@ def check_object_permissions(
         has_permission = (
             checker.has_perm(permission, obj) if obj else assignee.has_perm(permission)
         )
-        print(f"{permission} {obj}")
         if has_permission is False:
             return False
     return True
