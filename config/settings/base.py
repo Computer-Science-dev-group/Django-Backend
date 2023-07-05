@@ -73,6 +73,7 @@ THIRD_PARTY_APPS = [
     "drf_standardized_errors",
     "rest_framework_simplejwt",
     "guardian",
+    "notifications",
 ]
 
 LOCAL_APPS = [
@@ -329,6 +330,10 @@ SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "UPDATE_LAST_LOGIN": True,
 }
+
+NOTIFICATIONS_NOTIFICATION_MODEL = "notification.NotificationModel"
+DJANGO_NOTIFICATIONS_CONFIG = {"USE_JSONFIELD": True}
+
 # Your stuff...
 # ------------------------------------------------------------------------------
 IP_API_CO_URL = "https://ipapi.co"  # https://ipapi.co/api/

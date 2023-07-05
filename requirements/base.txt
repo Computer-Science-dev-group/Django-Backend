@@ -31,3 +31,4 @@ responses==0.23.1 # https://github.com/getsentry/responses
 djangorestframework-simplejwt[crypto]==5.2.2 # https://github.com/jazzband/djangorestframework-simplejwt
 django-guardian==2.4.0 # https://github.com/django-guardian/django-guardian
 freezegun==1.2.2 # https://github.com/spulec/freezegun
+django-notifications-hq==1.8.2 # https://github.com/django-notifications/django-notifications

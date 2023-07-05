@@ -5,7 +5,11 @@ from django.test import TestCase
 from django.utils import timezone
 from factory.django import DjangoModelFactory
 
-from uia_backend.notification.models import EmailMessageModel, EmailTrackingModel
+from uia_backend.notification.models import (
+    EmailMessageModel,
+    EmailTrackingModel,
+    NotificationModel,
+)
 
 
 class EmailMessageModelFactory(DjangoModelFactory):
@@ -38,8 +42,13 @@ class EmailMessageModelTest(TestCase):
         )
 
 
-class EmailTrackingModelFactory(TestCase):
+class EmailTrackingModelFactory(DjangoModelFactory):
     event_timestamp = timezone.now()
 
     class Meta:
         model = EmailTrackingModel
+
+
+class NotificationModelFactory(DjangoModelFactory):
+    class Meta:
+        model = NotificationModel
