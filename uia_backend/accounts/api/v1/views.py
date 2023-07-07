@@ -259,7 +259,7 @@ class FollowerCountAPIView(generics.RetrieveAPIView):
                 value={
                     "info": "Success",
                     "code": 200,
-                    "data": {
+                    "message": {
                         "follower_count": 3,
                     },
                 },
@@ -293,8 +293,8 @@ class FollowingCountAPIView(generics.RetrieveAPIView):
                 value={
                     "info": "Success",
                     "code": 200,
-                    "data": {
-                        "following_count": 3,
+                    "message": {
+                        "follower_count": 3,
                     },
                 },
             )

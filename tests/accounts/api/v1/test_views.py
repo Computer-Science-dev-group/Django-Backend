@@ -278,7 +278,6 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         response = self.client.get(self.following_count_url)
         self.assertEqual(response.status_code, 401)
 
-
     def test_authenticated_user_can_follow(self):
         """Test if an authenticated user can follow other users."""
 
@@ -299,6 +298,8 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
 
         self.client.force_authenticate(user=self.user_1)
         self.client.post(self.follow_url)
+
+        self.user_1.refresh_from_db()
 
         unfollow_response = self.client.delete(self.unfollow_url)
         self.assertEqual(unfollow_response.status_code, 200)

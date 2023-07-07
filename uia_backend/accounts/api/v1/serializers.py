@@ -199,19 +199,10 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return data
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = CustomUser
-        fields = ['id', 'email', 'first_name', 'last_name']
-
-
 class FollowsSerializer(serializers.ModelSerializer):
-    user_from = CustomUserSerializer(read_only=True)
-    user_to = CustomUserSerializer(read_only=True)
-
     class Meta:
         model = Follows
-        fields = ['user_from', 'user_to', 'created']
+        fields = ["user_from", "user_to"]
 
     def validate(self, attrs):
         attrs = super().validate(attrs)
@@ -221,7 +212,9 @@ class FollowsSerializer(serializers.ModelSerializer):
         if user_from == user_to:
             raise serializers.ValidationError("You cannot follow yourself.")
 
-        existing_relationship = Follows.objects.filter(user_from=user_from, user_to=user_to).exists()
+        existing_relationship = Follows.objects.filter(
+            user_from=user_from, user_to=user_to
+        ).exists()
         if existing_relationship:
             raise serializers.ValidationError("You are already following this user.")
 
