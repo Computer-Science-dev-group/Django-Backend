@@ -19,6 +19,8 @@ from uia_backend.accounts.api.v1.serializers import (
     CustomUserSerializer,
     EmailVerificationSerializer,
     FollowsSerializer,
+    FollowerCountSerializer,
+    FollowingCountSerializer,
     FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
@@ -31,12 +33,10 @@ from uia_backend.accounts.api.v1.serializers import (
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
 from uia_backend.accounts.models import (
     CustomUser,
+    Follows,
     FriendShipInvitation,
     UserFriendShipSettings,
 )
-
-from uia_backend.accounts.models import CustomUser, Follows
-
 
 class UserRegistrationAPIView(generics.CreateAPIView):
     serializer_class = UserRegistrationSerializer
@@ -162,194 +162,151 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
         return super().get(request, *args, **kwargs)
 
 
-# class FollowUserAPIView(generics.GenericAPIView):
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_object(self) -> Any:
-#         return self.request.user
-
-#     @extend_schema(
-#         examples=[
-#             OpenApiExample(
-#                 "Example",
-#                 response_only=True,
-#                 value={"info": "Success", "message": "You Followed User Successfully."},
-#             )
-#         ]
-#     )
-#     def post(self, request: Request, user_id) -> Response:
-#         user_to_follow = CustomUser.objects.get(id=user_id)
-#         current_user = self.get_object()
-
-#         if user_to_follow == current_user:
-#             return Response(
-#                 {
-#                     "info": "Failure",
-#                     "message": "You cannot follow yourself",
-#                 },
-#                 status=status.HTTP_400_BAD_REQUEST
-#             )
-
-#         current_user.following.add(user_to_follow)
-#         current_user.save()
-
-#         return Response(
-#             {
-#                 "info": "Success",
-#                 "message": f"You Followed {user_to_follow.get_full_name()} Successfully",
-#             },
-#             status=status.HTTP_200_OK
-#         )
-
-
-# class UnfollowUserAPIView(generics.GenericAPIView):
-#     permission_classes = [permissions.IsAuthenticated]
-
-#     def get_object(self) -> Any:
-#         return self.request.user
-
-#     @extend_schema(
-#         examples=[
-#             OpenApiExample(
-#                 "Example",
-#                 response_only=True,
-#                 value={"info": "Success", "message": "You Unfollowed User Successfully."},
-#             )
-#         ]
-#     )
-#     def post(self, request: Request, user_id) -> Response:
-#         try:
-#             user_to_unfollow = CustomUser.objects.get(id=user_id)
-#             current_user = self.get_object()
-
-#             current_user.following.remove(user_to_unfollow)
-#             current_user.save()
-
-#             return Response(
-#                 {
-#                     "info": "Success",
-#                     "message": f"You Unfollowed {user_to_unfollow.get_full_name()} Successfully.",
-#                 },
-#                 status=status.HTTP_200_OK
-#             )
-
-#         except CustomUser.DoesNotExist:
-#             return Response(
-#                 {
-#                     "info": "Failure",
-#                     "message": "That user does not exist.",
-#                 },
-#                 status=status.HTTP_404_NOT_FOUND
-#             )
-
-class FollowAPIView(generics.GenericAPIView):
+class FollowAPIView(generics.CreateAPIView):
+    serializer_class = FollowsSerializer
     permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["post"]
 
-    def get_object(self) -> Any:
-        return self.request.user
-
-    def post(self, request: Request, user_id) -> Response:
-        try:
-            user_to = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(
-                {
-                    "info": "Failure",
-                    "message": "That user does not exist.",
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if self.get_object() != user_to:
-            if self.get_object().follow(user_to):
-                return Response(
-                    {
-                         "info": "Success",
-                         "message": f"You followed {user_to.get_full_name()} Successfully",
-                    },
-                    status=status.HTTP_200_OK
-                )
-            else:
-                return Response(
-                    {
-                         "info": "Success",
-                         "message": f"You already follow {user_to.get_full_name()}",
-                    },
-                    status=status.HTTP_200_OK
-                )
-
-        return Response(
-            {
-                    "info": "Failure",
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
-            },
-            status=status.HTTP_40O_BAD_REQUEST
-        )
-
-    def delete(self, request: Request, user_id) -> Response:
-        try:
-            user_to = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(
-                {
-                    "info": "Failure",
-                    "message": "That user does not exist.",
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
-
-        if self.get_object() != user_to:
-            self.get_object().unfollow(user_to)
-            return Response(
-                {
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
                     "info": "Success",
-                    "message": f"You Unfollowed {user_to.get_full_name()} Successfully.",
+                    "message": "You followed John Doe successfully.",
                 },
-                status=status.HTTP_200_OK
             )
+        ]
+    )
+    def post(self, request, *args, **kwargs) -> Response:
+        """Follow a user by id"""
+
+        user_from = request.user
+        user_to = kwargs.get("user_id")
+        data = {"user_from": user_from.id, "user_to": user_to}
+
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+
+        user_to = serializer.validated_data['user_to']
 
         return Response(
             {
-                    "info": "Failure",
-                    "message": f"You cannot unfollow {user_to.get_full_name()}. You didn't follow them.",
+                "info": "Success",
+                "message": f"You followed {user_to.get_full_name()} successfully.",
             },
-            status=status.HTTP_40O_BAD_REQUEST
+            status=status.HTTP_200_OK,
         )
 
 
-class FollowerListAPIView(generics.GenericAPIView):
-    serializer_class = CustomUserSerializer
+class UnFollowAPIView(generics.DestroyAPIView):
+    serializer_class = FollowsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["delete"]
+
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "message": "You unfollowed John Doe successfully.",
+                },
+            )
+        ]
+    )
+    def delete(self, request, *args, **kwargs) -> Response:
+        """Unfollow a user by id"""
+
+        user_from = request.user
+        user_to = kwargs.get("user_id")
+        data = {"user_from": user_from.id, "user_to": user_to}
+
+        serializer = self.get_serializer(data=data)
+        instance = serializer.get_followership(attrs=data)
+        self.perform_destroy(instance)
+
+        user_to = instance.user_to
+
+        return Response(
+            {
+                "info": "Success",
+                "message": f"You unfollowed {user_to.get_full_name()} successfully.",
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+class FollowerCountAPIView(generics.RetrieveAPIView):
+    serializer_class = FollowerCountSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request: Request, user_id) -> Response:
-        try:
-            user = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(
-                {
-                    "info": "Failure",
-                    "message": "That user does not exist.",
-                },
-                status=status.HTTP_404_NOT_FOUND
-            )
+    def get_object(self):
+        user = self.request.user
+        return Follows.objects.filter(user_to=user.id)
 
-        followers = user.get_followers()
-        serializer = self.get_serializer(followers, many=True)
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "code": 200,
+                    "data": {
+                        "follower_count": 3,
+                    },
+                },
+            )
+        ]
+    ) 
+    def get(self, request, *args, **kwargs) -> Response:
+        """Retrieve a user follower's count by id"""
+
+        followers = self.get_object()
+        followers_count = followers.count()
+        serializer = self.get_serializer({"follower_count": followers_count})
+
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
-class FollowingListAPIView(generics.GenericAPIView):
-    serializer_class = CustomUserSerializer
+class FollowingCountAPIView(generics.RetrieveAPIView):
+    serializer_class = FollowingCountSerializer
     permission_classes = [permissions.IsAuthenticated]
 
-    def get(self, request, user_id) -> Response:
-        try:
-            user = CustomUser.objects.get(id=user_id)
-        except CustomUser.DoesNotExist:
-            return Response(status=404)
+    def get_object(self):
+        user = self.request.user
+        return Follows.objects.filter(user_from=user.id)
 
-        following = user.get_following()
-        serializer = CustomUserSerializer(following, many=True)
+    @transaction.atomic()
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "code": 200,
+                    "data": {
+                        "following_count": 3,
+                    },
+                },
+            )
+        ]
+    ) 
+    def get(self, request, *args, **kwargs) -> Response:
+        """Retrieve a user following's count by id"""
+
+        following = self.get_object()
+        following_count = following.count()
+        serializer = self.get_serializer({"following_count": following_count})
+
         return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 

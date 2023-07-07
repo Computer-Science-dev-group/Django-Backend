@@ -3,14 +3,15 @@ from django.urls import path
 from uia_backend.accounts.api.v1.views import (
     ChangePasswordAPIView,
     EmailVerificationAPIView,
+    FollowAPIView,
+    FollowerCountAPIView,
+    FollowingCountAPIView,
     FriendShipInvitationDetailAPIView,
     FriendShipInvitationListAPIView,
-    FollowAPIView,
-    FollowerListAPIView,
-    FollowingListAPIView,
     LoginAPIView,
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
+    UnFollowAPIView,
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
@@ -44,6 +45,20 @@ urlpatterns = [
         "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),
     path("list/", UserProfileListView.as_view(), name="accounts_list"),
+    path("me/follow/<uuid:user_id>/", FollowAPIView.as_view(), name="user_follow"),
+    path(
+        "me/unfollow/<uuid:user_id>/", UnFollowAPIView.as_view(), name="user_unfollow"
+    ),
+    path(
+        "me/followers/count/",
+        FollowerCountAPIView.as_view(),
+        name="user_followers_count",
+    ),
+    path(
+        "me/following/count/",
+        FollowingCountAPIView.as_view(),
+        name="user_following_count",
+    ),
     path(
         "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"
     ),
@@ -61,13 +76,4 @@ urlpatterns = [
         "me/friendships/invitations/<uuid:pk>/",
         FriendShipInvitationDetailAPIView.as_view(),
     ),   name="friendship_invitation_detail",
-    path(
-        "me/follow/<uuid:user_id>", FollowAPIView.as_view(), name="user_follow_unfollow"
-    ),
-    path(
-        "me/followers", FollowerListAPIView.as_view(), name="user_followers_list"
-    ),
-    path(
-        "me/following", FollowingListAPIView.as_view(), name="user_following_list"
-    ),
 ]

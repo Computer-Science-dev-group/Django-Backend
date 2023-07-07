@@ -5,6 +5,7 @@ from typing import Any
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
@@ -211,6 +212,35 @@ class FollowsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follows
         fields = ['user_from', 'user_to', 'created']
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        user_from = attrs.get("user_from")
+        user_to = attrs.get("user_to")
+
+        if user_from == user_to:
+            raise serializers.ValidationError("You cannot follow yourself.")
+
+        existing_relationship = Follows.objects.filter(user_from=user_from, user_to=user_to).exists()
+        if existing_relationship:
+            raise serializers.ValidationError("You are already following this user.")
+
+        return attrs
+
+    def get_followership(self, attrs):
+        attrs = super().validate(attrs)
+        user_from = attrs.get("user_from")
+        user_to = attrs.get("user_to")
+
+        return get_object_or_404(Follows, user_from=user_from, user_to=user_to)
+
+
+class FollowerCountSerializer(serializers.Serializer):
+    follower_count = serializers.IntegerField()
+
+
+class FollowingCountSerializer(serializers.Serializer):
+    following_count = serializers.IntegerField()
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):
