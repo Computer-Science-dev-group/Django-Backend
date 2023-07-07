@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest import mock
+from urllib.parse import urlencode
 
 import responses
 from django.conf import settings
@@ -1320,3 +1321,126 @@ class FriendShipInvitationDetailAPIViewTests(APITestCase):
                 },
             },
         )
+
+
+class UserProfileListAPIViewTests(APITestCase):
+    def setUp(self):
+        self.user = UserModelFactory.create(is_active=True, is_verified=True)
+        self.user_2 = UserModelFactory.create(
+            is_active=True,
+            is_verified=True,
+            email="noob@noob.com",
+            first_name="Joan",
+            last_name="Pike",
+        )
+        self.client.force_authenticate(user=self.user)
+        self.url = reverse("accounts_api_v1:accounts_list")
+
+    def test_unauthenticated_user_can_view_search(self):
+        """Test if an unauthenticated user can search."""
+        self.client.force_authenticate(user=None)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_view_search(self):
+        """Test if an authenticated user can search."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_list_with_results(self):
+        """Test search with results."""
+        expected_data = {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "status": "Success",
+            "code": 200,
+            "data": [
+                {
+                    "first_name": self.user.first_name,
+                    "last_name": self.user.last_name,
+                    "profile_picture": None,
+                    "cover_photo": None,
+                    "phone_number": self.user.phone_number,
+                    "display_name": self.user.display_name,
+                    "year_of_graduation": self.user.year_of_graduation,
+                    "department": self.user.department,
+                    "faculty": self.user.faculty,
+                    "bio": None,
+                    "gender": None,
+                    "date_of_birth": self.user.date_of_birth.isoformat(),
+                    "handle": None,
+                },
+                {
+                    "first_name": self.user_2.first_name,
+                    "last_name": self.user_2.last_name,
+                    "profile_picture": None,
+                    "cover_photo": None,
+                    "phone_number": self.user_2.phone_number,
+                    "display_name": self.user_2.display_name,
+                    "year_of_graduation": self.user_2.year_of_graduation,
+                    "department": self.user_2.department,
+                    "faculty": self.user_2.faculty,
+                    "bio": None,
+                    "gender": None,
+                    "date_of_birth": self.user_2.date_of_birth.isoformat(),
+                    "handle": None,
+                },
+            ],
+        }
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_data)
+
+    def test_search_with_matching_results(self):
+        """Test search with matching result results."""
+        query_params = {
+            "search": "Pik",
+        }
+        url_with_params = f"{self.url}?{urlencode(query_params)}"
+        expected_data = {
+            "count": 1,
+            "next": None,
+            "previous": None,
+            "status": "Success",
+            "code": 200,
+            "data": [
+                {
+                    "first_name": self.user_2.first_name,
+                    "last_name": self.user_2.last_name,
+                    "profile_picture": None,
+                    "cover_photo": None,
+                    "phone_number": self.user_2.phone_number,
+                    "display_name": self.user_2.display_name,
+                    "year_of_graduation": self.user_2.year_of_graduation,
+                    "department": self.user_2.department,
+                    "faculty": self.user_2.faculty,
+                    "bio": None,
+                    "gender": None,
+                    "date_of_birth": self.user_2.date_of_birth.isoformat(),
+                    "handle": None,
+                },
+            ],
+        }
+        response = self.client.get(url_with_params)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_data)
+
+    def test_search_with_no_results(self):
+        """Test search with no results."""
+        query_params = {
+            "search": "No Matching Result",
+        }
+        url_with_params = f"{self.url}?{urlencode(query_params)}"
+        expected_data = {
+            "count": 0,
+            "next": None,
+            "previous": None,
+            "status": "Success",
+            "code": 200,
+            "data": [],
+        }
+        response = self.client.get(url_with_params)
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(response.json(), expected_data)

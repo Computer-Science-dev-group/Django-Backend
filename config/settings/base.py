@@ -344,3 +344,5 @@ DEFUALT_CLUSTER_NAMES = {
     3: "{department_name} department",
     4: "{year_of_graduation} set",
 }
+
+CACHE_DURATION = 3600
