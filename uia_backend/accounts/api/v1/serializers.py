@@ -14,7 +14,7 @@ from uia_backend.accounts import constants
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
-    Follows
+    Follows,
     FriendShip,
     FriendShipInvitation,
     PasswordResetAttempt,

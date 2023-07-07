@@ -16,11 +16,10 @@ from rest_framework.response import Response
 from config.settings.base import CACHE_DURATION
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
-    CustomUserSerializer,
     EmailVerificationSerializer,
-    FollowsSerializer,
     FollowerCountSerializer,
     FollowingCountSerializer,
+    FollowsSerializer,
     FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
@@ -192,7 +191,7 @@ class FollowAPIView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        user_to = serializer.validated_data['user_to']
+        user_to = serializer.validated_data["user_to"]
 
         return Response(
             {

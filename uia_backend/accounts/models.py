@@ -7,7 +7,6 @@ from django.contrib.auth.models import (
 )
 from django.core import signing
 from django.db import models
-from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
 from uia_backend.libs.base_models import BaseAbstractModel
@@ -57,7 +56,9 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     faculty = models.CharField(max_length=60)
     department = models.CharField(max_length=60)
     year_of_graduation = models.CharField(max_length=4)
-    follows = models.ManyToManyField("self", symmetrical=False, related_name="followers", through="Follows")
+    follows = models.ManyToManyField(
+        "self", symmetrical=False, related_name="followers", through="Follows"
+    )
     is_active = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True)
@@ -78,18 +79,8 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     def __str__(self):
         return self.email
 
-    def follow(self, user):
-        """Create a follow relationship between two users"""
-        follow, created = Follows.objects.get_or_create(user_from=self, user_to=user)
-        return created
-
-    def unfollow(self, user):
-        """Remove a follow relationship between two users"""
-        Follows.objects.filter(user_from=self, user_to=user).delete()
-
-    def is_following(self, user):
-        """Check if self is following user"""
-        return Follows.objects.filter(user_from=self, user_to=user).exists()
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}"
 
     def get_followers(self):
         """Get the followers of self"""
@@ -109,8 +100,12 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
 
 
 class Follows(models.Model):
-    user_from = models.ForeignKey(CustomUser, related_name="rel_from_set", on_delete=models.CASCADE)
-    user_to = models.ForeignKey(CustomUser, related_name="rel_to_set", on_delete=models.CASCADE)
+    user_from = models.ForeignKey(
+        CustomUser, related_name="rel_from_set", on_delete=models.CASCADE
+    )
+    user_to = models.ForeignKey(
+        CustomUser, related_name="rel_to_set", on_delete=models.CASCADE
+    )
     created = models.DateTimeField(auto_now_add=True)
 
     class Meta:

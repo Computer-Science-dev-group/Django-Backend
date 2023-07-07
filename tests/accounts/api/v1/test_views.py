@@ -251,12 +251,8 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.unfollow_url = reverse(
             "accounts_api_v1:user_unfollow", kwargs={"user_id": self.user_2.id}
         )
-        self.followers_count_url = reverse(
-            "accounts_api_v1:user_followers_count"
-        )
-        self.following_count_url = reverse(
-            "accounts_api_v1:user_following_count"
-        )
+        self.followers_count_url = reverse("accounts_api_v1:user_followers_count")
+        self.following_count_url = reverse("accounts_api_v1:user_following_count")
 
     def test_unauthenticated_user_cannot_follow(self):
         """Test if an unauthenticated user can follow other users."""
