@@ -319,6 +319,13 @@ class UserProfileDetailAPIView(generics.RetrieveAPIView):
 class FriendShipInvitationListAPIView(generics.ListCreateAPIView):
     serializer_class = FriendshipInvitationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["status"]
+    ordering_fields = ["created_datetime"]
+    ordering = ["-created_datetime"]
 
     def get_queryset(self) -> QuerySet[FriendShipInvitation]:
         return FriendShipInvitation.objects.filter(
@@ -354,6 +361,18 @@ class FriendShipInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
 class UserFriendShipsListAPIView(generics.ListAPIView):
     serializer_class = UserFriendShipSettingsSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_fields = ["is_blocked"]
+    search_fields = ["friendship__users__first_name", "friendship__users__last_name"]
+    ordering_fields = [
+        "created_datetime",
+        "friendship__users__first_name",
+        "friendship__users__last_name",
+    ]
+    ordering = ["-created_datetime"]
 
     def get_queryset(self) -> QuerySet[UserFriendShipSettings]:
         return UserFriendShipSettings.objects.filter(user=self.request.user)

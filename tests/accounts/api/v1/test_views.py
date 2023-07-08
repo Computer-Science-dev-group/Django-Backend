@@ -1086,18 +1086,6 @@ class FriendShipInvitationListAPIViewTests(APITestCase):
                 "previous": None,
                 "data": [
                     {
-                        "id": str(record_1.id),
-                        "sent_to": str(record_1.user.id),
-                        "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
-                        "created_by": str(record_1.created_by.id),
-                        "created_datetime": serializers.DateTimeField().to_representation(
-                            record_1.created_datetime
-                        ),
-                        "updated_datetime": serializers.DateTimeField().to_representation(
-                            record_1.updated_datetime
-                        ),
-                    },
-                    {
                         "id": str(record_2.id),
                         "sent_to": str(record_2.user.id),
                         "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
@@ -1107,6 +1095,18 @@ class FriendShipInvitationListAPIViewTests(APITestCase):
                         ),
                         "updated_datetime": serializers.DateTimeField().to_representation(
                             record_2.updated_datetime
+                        ),
+                    },
+                    {
+                        "id": str(record_1.id),
+                        "sent_to": str(record_1.user.id),
+                        "status": FriendShipInvitation.INVITATION_STATUS_PENDING,
+                        "created_by": str(record_1.created_by.id),
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            record_1.created_datetime
+                        ),
+                        "updated_datetime": serializers.DateTimeField().to_representation(
+                            record_1.updated_datetime
                         ),
                     },
                 ],

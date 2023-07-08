@@ -59,20 +59,20 @@ class ClusterListCreateAPIViewTests(APITestCase):
             "previous": None,
             "data": [
                 {
-                    "id": str(user_cluster.id),
-                    "title": user_cluster.title,
-                    "description": user_cluster.description,
-                    "icon": user_cluster.icon,
-                    "created_by": None,
-                    "is_default": False,
-                },
-                {
                     "id": str(internal_cluster.id),
                     "title": internal_cluster.title,
                     "description": internal_cluster.description,
                     "icon": internal_cluster.icon,
                     "created_by": None,
                     "is_default": True,
+                },
+                {
+                    "id": str(user_cluster.id),
+                    "title": user_cluster.title,
+                    "description": user_cluster.description,
+                    "icon": user_cluster.icon,
+                    "created_by": None,
+                    "is_default": False,
                 },
             ],
         }
@@ -411,15 +411,15 @@ class ClusterMembershipListAPIViewTests(APITestCase):
             "previous": None,
             "data": [
                 {
-                    "id": str(self.membership.id),
-                    "user": dict(
-                        UserProfileSerializer().to_representation(instance=self.user)
-                    ),
-                },
-                {
                     "id": str(membership_1.id),
                     "user": dict(
                         UserProfileSerializer().to_representation(instance=member_1)
+                    ),
+                },
+                {
+                    "id": str(self.membership.id),
+                    "user": dict(
+                        UserProfileSerializer().to_representation(instance=self.user)
                     ),
                 },
             ],

@@ -1,6 +1,6 @@
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, status, views
+from rest_framework import filters, generics, status, views
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -12,6 +12,10 @@ from uia_backend.notification.models import NotificationModel
 class NotificationListAPIView(generics.ListAPIView):
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    filterset_fields = ["type", "unread"]
+    ordering_fields = ["created_datetime", "type", "unread"]
+    ordering = ["-created_datetime"]
 
     def get_queryset(self) -> QuerySet:
         return self.request.user.notifications.all()
