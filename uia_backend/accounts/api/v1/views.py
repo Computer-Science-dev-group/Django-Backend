@@ -1,8 +1,12 @@
+from logging import getLogger
 from typing import Any
 
+from django.conf import settings
 from django.db import transaction
 from django.db.models import Q
+from django.db.models.expressions import RawSQL
 from django.db.models.query import QuerySet
+from django.db.utils import Error
 from django.http import Http404
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
@@ -14,6 +18,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from config.settings.base import CACHE_DURATION
+from uia_backend.accounts.api.v1.queries import USER_FEED_QUERY
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     CustomUserSerializer,
@@ -35,6 +40,11 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     UserFriendShipSettings,
 )
+from uia_backend.cluster.constants import VIEW_CLUSTER_PERMISSION
+from uia_backend.messaging.api.v1.serializers import PostSerializer
+from uia_backend.messaging.models import Post
+
+logger = getLogger()
 
 
 class UserRegistrationAPIView(generics.CreateAPIView):
@@ -429,3 +439,48 @@ class UserProfileSearchView(generics.ListAPIView):
     @method_decorator(cache_page(CACHE_DURATION))
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().get(request, *args, **kwargs)
+
+
+# NOTE (Joseph): This view only work on posgres DB (We need to find a better implementation)
+class UserFeedAPIView(generics.ListAPIView):
+    serializer_class = PostSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ["created_datetime"]
+    ordering = ["-created_datetime"]
+
+    def get_queryset(self) -> QuerySet[Post]:
+        """Return the queryset of posts for the user's feed."""
+
+        try:
+            # NOTE: Be careful to not change the arrangement of the params without
+            # effecting the change in the SQL Query
+            with transaction.atomic():
+                query = Post.objects.filter(
+                    id__in=RawSQL(
+                        sql=USER_FEED_QUERY,
+                        params=[
+                            self.request.user.id,
+                            VIEW_CLUSTER_PERMISSION,
+                            settings.REST_FRAMEWORK["PAGE_SIZE"],
+                        ],
+                    )
+                )
+        except Error as error:
+            # let catch everything just in case somthing breaks in the query
+            # so we dont return noting to the user lets return their own posts
+            logger.exception(
+                "uia_backend::accounts::api::v1::views::UserFeedAPIView::get_queryset:: "
+                "A error occured while retrieveing users feed.",
+                extra={
+                    "user_id": self.request.user.id,
+                    "query": USER_FEED_QUERY,
+                    "error": str(error),
+                },
+            )
+
+            query = Post.objects.filter(
+                created_by=self.request.user,
+            )
+
+        return query

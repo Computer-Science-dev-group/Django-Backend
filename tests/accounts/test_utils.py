@@ -34,9 +34,15 @@ class SendUserRegistrationEmailVerificationMailTests(TestCase):
         req.META["SERVER_PORT"] = "8000"
         self.request = Request(request=req)
 
-        with mock.patch(
-            "uia_backend.notification.tasks.send_template_email_task.delay"
-        ) as mock_send_email_task:
+        with (
+            mock.patch(
+                "django.core.signing.TimestampSigner.sign_object",
+                side_effect=["nice_ginature"],
+            ),
+            mock.patch(
+                "uia_backend.notification.tasks.send_template_email_task.delay"
+            ) as mock_send_email_task,
+        ):
             send_user_registration_email_verification_mail(
                 user=self.user, request=self.request
             )
@@ -48,9 +54,7 @@ class SendUserRegistrationEmailVerificationMailTests(TestCase):
 
         self.assertIsNotNone(verification_record)
 
-        signer = signing.TimestampSigner()
-        signature = signer.sign_object(str(verification_record.id))
-        url = reverse("accounts_api_v1:email_verification", args=[signature])
+        url = reverse("accounts_api_v1:email_verification", args=["nice_ginature"])
 
         mock_send_email_task.assert_called_once_with(
             recipients=[self.user.email],
