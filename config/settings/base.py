@@ -81,6 +81,7 @@ LOCAL_APPS = [
     "uia_backend.accounts",
     "uia_backend.notification",
     "uia_backend.cluster",
+    "uia_backend.messaging",
 ]
 # https://docs.djangoproject.com/en/dev/ref/settings/#installed-apps
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -307,6 +308,7 @@ REST_FRAMEWORK = {
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.LimitOffsetPagination",
     "PAGE_SIZE": 50,
+    "DEFAULT_FILTER_BACKENDS": ["django_filters.rest_framework.DjangoFilterBackend"],
 }
 
 # django-cors-headers - https://github.com/adamchainz/django-cors-headers#setup
@@ -319,6 +321,7 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "Documentation of API endpoints of UIA-Backend",
     "VERSION": "1.0.0",
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
 }
 
 DRF_STANDARDIZED_ERRORS = {
@@ -345,4 +348,5 @@ DEFUALT_CLUSTER_NAMES = {
     4: "{year_of_graduation} set",
 }
 
-CACHE_DURATION = 3600
+CACHE_DURATION = 3600  # in seconds
+MAX_MEDIA_UPLOAD_SIZE = 10485760  # In bytes

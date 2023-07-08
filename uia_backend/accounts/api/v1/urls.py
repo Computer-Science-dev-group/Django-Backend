@@ -8,6 +8,7 @@ from uia_backend.accounts.api.v1.views import (
     LoginAPIView,
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
+    UserFeedAPIView,
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
@@ -59,4 +60,5 @@ urlpatterns = [
         FriendShipInvitationDetailAPIView.as_view(),
         name="friendship_invitation_detail",
     ),
+    path("me/feed/", UserFeedAPIView.as_view(), name="user_feed"),
 ]

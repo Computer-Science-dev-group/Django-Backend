@@ -28,13 +28,16 @@ services:
     build:
       context: .
       dockerfile: ./compose/production/postgres/Dockerfile
-    image: uia_backend_production_postgres
+    image: uia_backend_local_postgres
     container_name: uia_backend_local_postgres
     volumes:
       - uia_backend_local_postgres_data:/var/lib/postgresql/data
       - uia_backend_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
+    ports:
+      - 5432
+      - "5433:5432"
 
   redis:
     image: redis:6
