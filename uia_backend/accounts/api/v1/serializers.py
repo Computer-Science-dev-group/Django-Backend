@@ -5,7 +5,6 @@ from typing import Any
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
-from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import AccessToken
@@ -203,37 +202,31 @@ class FollowsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follows
         fields = ["user_from", "user_to"]
+        read_only_fields = ["user_from"]
 
-    def validate(self, attrs):
-        attrs = super().validate(attrs)
-        user_from = attrs.get("user_from")
-        user_to = attrs.get("user_to")
+    def validate_user_to(self, value: str):
+        "Validate user_to."
 
-        if user_from == user_to:
-            raise serializers.ValidationError("You cannot follow yourself.")
+        user_from = self.context["request"].user
 
-        existing_relationship = Follows.objects.filter(
-            user_from=user_from, user_to=user_to
-        ).exists()
-        if existing_relationship:
-            raise serializers.ValidationError("You are already following this user.")
+        if (user_from == value) or Follows.objects.filter(
+            user_from=user_from,
+            user_to=value
+        ).exists():
+            raise serializers.ValidationError({
+                "message": "Invalid follow request. Cannot follow user"
+            })
 
-        return attrs
+        return value
 
-    def get_followership(self, attrs):
-        attrs = super().validate(attrs)
-        user_from = attrs.get("user_from")
-        user_to = attrs.get("user_to")
+    def create(self, validated_data: dict[str, Any]) -> Follows:
+        """Create a follow relationship"""
 
-        return get_object_or_404(Follows, user_from=user_from, user_to=user_to)
+        user_from = self.context['request'].user
+        user_to = validated_data['user_to']
+        follows = Follows.objects.create(user_from=user_from, user_to=user_to)
 
-
-class FollowerCountSerializer(serializers.Serializer):
-    follower_count = serializers.IntegerField()
-
-
-class FollowingCountSerializer(serializers.Serializer):
-    following_count = serializers.IntegerField()
+        return follows
 
 
 class ChangePasswordSerializer(serializers.ModelSerializer):

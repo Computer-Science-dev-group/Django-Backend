@@ -251,8 +251,6 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.unfollow_url = reverse(
             "accounts_api_v1:user_unfollow", kwargs={"user_id": self.user_2.id}
         )
-        self.followers_count_url = reverse("accounts_api_v1:user_followers_count")
-        self.following_count_url = reverse("accounts_api_v1:user_following_count")
 
     def test_unauthenticated_user_cannot_follow(self):
         """Test if an unauthenticated user can follow other users."""
@@ -266,32 +264,13 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         response = self.client.delete(self.unfollow_url)
         self.assertEqual(response.status_code, 401)
 
-    def test_unauthenticated_user_cannot_view_followers_count(self):
-        """Test if an unauthenticated user cannot view their followers count"""
-
-        response = self.client.get(self.followers_count_url)
-        self.assertEqual(response.status_code, 401)
-
-    def test_unauthenticated_user_cannot_view_following_count(self):
-        """Test if an unauthenticated user cannot view their following count"""
-
-        response = self.client.get(self.following_count_url)
-        self.assertEqual(response.status_code, 401)
-
     def test_authenticated_user_can_follow(self):
         """Test if an authenticated user can follow other users."""
 
         self.client.force_authenticate(user=self.user_1)
 
         response = self.client.post(self.follow_url)
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(
-            dict(response.json()["data"]),
-            {
-                "info": "Success",
-                "message": f"You followed {self.user_2.get_full_name()} successfully.",
-            },
-        )
+        self.assertEqual(response.status_code, 201)
 
     def test_authenticated_user_can_unfollow(self):
         """Test if an authenticated user can unfollow other users."""
@@ -302,30 +281,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.user_1.refresh_from_db()
 
         unfollow_response = self.client.delete(self.unfollow_url)
-        self.assertEqual(unfollow_response.status_code, 200)
-        self.assertDictEqual(
-            dict(unfollow_response.json()["data"]),
-            {
-                "info": "Success",
-                "message": f"You unfollowed {self.user_2.get_full_name()} successfully.",
-            },
-        )
-
-    def test_authenticated_user_can_view_followers_count(self):
-        """Test if an authenticated user can view their followers count"""
-
-        self.client.force_authenticate(user=self.user_1)
-
-        response = self.client.get(self.followers_count_url)
-        self.assertEqual(response.status_code, 200)
-
-    def test_authenticated_user_can_view_following_count(self):
-        """Test if an authenticated user can view their following count"""
-
-        self.client.force_authenticate(user=self.user_1)
-
-        response = self.client.get(self.following_count_url)
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(unfollow_response.status_code, 204)
 
 
 class UserProfileAPIViewTests(APITestCase):

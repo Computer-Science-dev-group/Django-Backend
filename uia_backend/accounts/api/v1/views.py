@@ -17,8 +17,6 @@ from config.settings.base import CACHE_DURATION
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
-    FollowerCountSerializer,
-    FollowingCountSerializer,
     FollowsSerializer,
     FriendshipInvitationSerializer,
     LoginSerializer,
@@ -165,149 +163,44 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
 class FollowAPIView(generics.CreateAPIView):
     serializer_class = FollowsSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["post"]
 
-    @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "message": "You followed John Doe successfully.",
-                },
-            )
-        ]
-    )
-    def post(self, request, *args, **kwargs) -> Response:
-        """Follow a user by id"""
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        user_to = self.kwargs["user_id"]
+        context['user_to'] = user_to
 
-        user_from = request.user
-        user_to = kwargs.get("user_id")
-        data = {"user_from": user_from.id, "user_to": user_to}
+        return context
 
-        serializer = self.get_serializer(data=data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-
-        user_to = serializer.validated_data["user_to"]
-
-        return Response(
-            {
-                "info": "Success",
-                "message": f"You followed {user_to.get_full_name()} successfully.",
-            },
-            status=status.HTTP_200_OK,
+    def perform_create(self, serializer: FollowsSerializer) -> None:
+        serializer.save(
+            user_from=self.request.user
         )
+
+    def post(self, request, *args, **kwargs):
+        serializer = self.get_serializer(
+            data={"user_to": self.kwargs["user_id"]},
+            context=self.get_serializer_context()
+        )
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class UnFollowAPIView(generics.DestroyAPIView):
     serializer_class = FollowsSerializer
     permission_classes = [permissions.IsAuthenticated]
-    http_method_names = ["delete"]
 
-    @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "message": "You unfollowed John Doe successfully.",
-                },
-            )
-        ]
-    )
-    def delete(self, request, *args, **kwargs) -> Response:
-        """Unfollow a user by id"""
+    def perform_destroy(self, instance: Follows) -> None:
+        instance.delete()
 
-        user_from = request.user
-        user_to = kwargs.get("user_id")
-        data = {"user_from": user_from.id, "user_to": user_to}
-
-        serializer = self.get_serializer(data=data)
-        instance = serializer.get_followership(attrs=data)
-        self.perform_destroy(instance)
-
-        user_to = instance.user_to
-
-        return Response(
-            {
-                "info": "Success",
-                "message": f"You unfollowed {user_to.get_full_name()} successfully.",
-            },
-            status=status.HTTP_200_OK,
+    def get_object(self):
+        """Retrieve follow object"""
+        return get_object_or_404(
+            Follows,
+            user_from=self.request.user.id,
+            user_to=self.kwargs["user_id"]
         )
-
-
-class FollowerCountAPIView(generics.RetrieveAPIView):
-    serializer_class = FollowerCountSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        user = self.request.user
-        return Follows.objects.filter(user_to=user.id)
-
-    @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "code": 200,
-                    "message": {
-                        "follower_count": 3,
-                    },
-                },
-            )
-        ]
-    )
-    def get(self, request, *args, **kwargs) -> Response:
-        """Retrieve a user follower's count by id"""
-
-        followers = self.get_object()
-        followers_count = followers.count()
-        serializer = self.get_serializer({"follower_count": followers_count})
-
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
-
-
-class FollowingCountAPIView(generics.RetrieveAPIView):
-    serializer_class = FollowingCountSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_object(self):
-        user = self.request.user
-        return Follows.objects.filter(user_from=user.id)
-
-    @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "code": 200,
-                    "message": {
-                        "follower_count": 3,
-                    },
-                },
-            )
-        ]
-    )
-    def get(self, request, *args, **kwargs) -> Response:
-        """Retrieve a user following's count by id"""
-
-        following = self.get_object()
-        following_count = following.count()
-        serializer = self.get_serializer({"following_count": following_count})
-
-        return Response(data=serializer.data, status=status.HTTP_200_OK)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):

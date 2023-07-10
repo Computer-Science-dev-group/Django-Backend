@@ -98,20 +98,15 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
         return CustomUser.objects.filter(followers__user_from=self).count()
 
 
-class Follows(models.Model):
+class Follows(BaseAbstractModel):
+    """Model that represents a follow relationship between two users."""
+
     user_from = models.ForeignKey(
         CustomUser, related_name="rel_from_set", on_delete=models.CASCADE
     )
     user_to = models.ForeignKey(
         CustomUser, related_name="rel_to_set", on_delete=models.CASCADE
     )
-    created = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        indexes = [
-            models.Index(fields=["-created"]),
-        ]
-        ordering = ["-created"]
 
     def __str__(self):
         return f"{self.user_from} follows {self.user_to}"
