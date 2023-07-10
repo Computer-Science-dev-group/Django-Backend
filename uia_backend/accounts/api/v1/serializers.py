@@ -210,20 +210,19 @@ class FollowsSerializer(serializers.ModelSerializer):
         user_from = self.context["request"].user
 
         if (user_from == value) or Follows.objects.filter(
-            user_from=user_from,
-            user_to=value
+            user_from=user_from, user_to=value
         ).exists():
-            raise serializers.ValidationError({
-                "message": "Invalid follow request. Cannot follow user"
-            })
+            raise serializers.ValidationError(
+                {"message": "Invalid follow request. Cannot follow user"}
+            )
 
         return value
 
     def create(self, validated_data: dict[str, Any]) -> Follows:
         """Create a follow relationship"""
 
-        user_from = self.context['request'].user
-        user_to = validated_data['user_to']
+        user_from = self.context["request"].user
+        user_to = validated_data["user_to"]
         follows = Follows.objects.create(user_from=user_from, user_to=user_to)
 
         return follows

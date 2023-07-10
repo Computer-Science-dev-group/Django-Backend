@@ -167,19 +167,17 @@ class FollowAPIView(generics.CreateAPIView):
     def get_serializer_context(self):
         context = super().get_serializer_context()
         user_to = self.kwargs["user_id"]
-        context['user_to'] = user_to
+        context["user_to"] = user_to
 
         return context
 
     def perform_create(self, serializer: FollowsSerializer) -> None:
-        serializer.save(
-            user_from=self.request.user
-        )
+        serializer.save(user_from=self.request.user)
 
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(
             data={"user_to": self.kwargs["user_id"]},
-            context=self.get_serializer_context()
+            context=self.get_serializer_context(),
         )
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
@@ -197,9 +195,7 @@ class UnFollowAPIView(generics.DestroyAPIView):
     def get_object(self):
         """Retrieve follow object"""
         return get_object_or_404(
-            Follows,
-            user_from=self.request.user.id,
-            user_to=self.kwargs["user_id"]
+            Follows, user_from=self.request.user.id, user_to=self.kwargs["user_id"]
         )
 
 
