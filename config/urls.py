@@ -25,6 +25,13 @@ urlpatterns = [
             namespace="notification_api_v1",
         ),
     ),
+    path(
+        "api/v1/messaging/",
+        include(
+            ("uia_backend.messaging.api.v1.urls", "messaging_api_v1"),
+            namespace="messaging_api_v1",
+        ),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS

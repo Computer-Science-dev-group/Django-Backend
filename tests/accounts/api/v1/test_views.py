@@ -243,6 +243,15 @@ class UserProfileAPIViewTests(APITestCase):
         response = self.client.get(self.url, args=[self.user.id])
         self.assertEqual(response.status_code, 401)
 
+        self.assertDictEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
     def test_authenticated_user_can_view_profile(self):
         """Test if an authenticated user can view profile."""
 
