@@ -32,6 +32,13 @@ urlpatterns = [
             namespace="messaging_api_v1",
         ),
     ),
+    path(
+        "api/v1/experiments/",
+        include(
+            ("uia_backend.experiments.api.v1.urls", "experiments_api_v1"),
+            namespace="experiments_api_v1",
+        ),
+    ),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 # API URLS
