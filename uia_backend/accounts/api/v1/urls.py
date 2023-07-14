@@ -1,4 +1,5 @@
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 
 from uia_backend.accounts.api.v1.views import (
     ChangePasswordAPIView,
@@ -23,6 +24,7 @@ from uia_backend.accounts.api.v1.views import (
 urlpatterns = [
     path("signup/", UserRegistrationAPIView.as_view(), name="user_registration"),
     path("signin/", LoginAPIView.as_view(), name="user_signin"),
+    path("token-refesh/", TokenRefreshView.as_view(), name="token_refresh"),
     path(
         "email-verification/<str:signature>/",
         EmailVerificationAPIView.as_view(),
