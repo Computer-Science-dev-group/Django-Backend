@@ -274,7 +274,7 @@ class LoginSerializerTests(CustomSerializerTests):
     serializer_class = LoginSerializer
 
     REQUIRED_FIELDS = ["email", "password"]
-    NON_REQUIRED_FIELDS = []
+    NON_REQUIRED_FIELDS = ["auth_token", "refresh_token"]
 
     def setUp(self) -> None:
         user = UserModelFactory.create(email="user@example.com", is_active=True)

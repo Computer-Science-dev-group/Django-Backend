@@ -332,6 +332,8 @@ DRF_STANDARDIZED_ERRORS = {
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=30),
     "UPDATE_LAST_LOGIN": True,
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+    "ROTATE_REFRESH_TOKENS": False,
 }
 
 NOTIFICATIONS_NOTIFICATION_MODEL = "notification.NotificationModel"

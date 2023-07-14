@@ -1,5 +1,6 @@
 from datetime import timedelta
 from unittest import mock
+from unittest.mock import MagicMock
 from urllib.parse import urlencode
 
 import responses
@@ -433,9 +434,13 @@ class LoginAPIViewTests(APITestCase):
 
         valid_data = {"email": "user@example.com", "password": "string"}
 
+        refresh_token_mock = MagicMock()
+        refresh_token_mock.__str__ = lambda self: "refresh_token"
+        refresh_token_mock.access_token.__str__ = lambda self: "access_token"
+
         with mock.patch(
-            "rest_framework_simplejwt.tokens.AccessToken.for_user",
-            side_effect=["jwt-token-asasasas"],
+            "rest_framework_simplejwt.tokens.RefreshToken.for_user",
+            side_effect=[refresh_token_mock],
         ) as jwt_token_mock:
             response = self.client.post(data=valid_data, path=self.url)
 
@@ -446,7 +451,10 @@ class LoginAPIViewTests(APITestCase):
             {
                 "status": "Success",
                 "code": 200,
-                "data": {"auth_token": "jwt-token-asasasas"},
+                "data": {
+                    "auth_token": "access_token",
+                    "refresh_token": "refresh_token",
+                },
             },
         )
 
