@@ -27,6 +27,7 @@ from uia_backend.accounts.utils import (
     user_handle,
 )
 from uia_backend.cluster.utils import ClusterManager
+from uia_backend.experiments.utils import enroll_user_to_prealpha_testing_experiment
 
 logger = logging.getLogger()
 
@@ -93,6 +94,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         send_user_registration_email_verification_mail(
             user, request=self.context["request"]
         )
+        enroll_user_to_prealpha_testing_experiment(user)
         return user
 
 

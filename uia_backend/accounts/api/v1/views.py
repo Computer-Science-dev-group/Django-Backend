@@ -41,6 +41,11 @@ from uia_backend.accounts.models import (
     UserFriendShipSettings,
 )
 from uia_backend.cluster.constants import VIEW_CLUSTER_PERMISSION
+from uia_backend.experiments.constants import ER_001_PRE_ALPHA_USER_TESTING_TAG
+from uia_backend.experiments.models import (
+    ExperimentConfig,
+    PreAlphaUserTestingExperiment,
+)
 from uia_backend.messaging.api.v1.serializers import PostSerializer
 from uia_backend.messaging.models import Post
 
@@ -73,6 +78,31 @@ class UserRegistrationAPIView(generics.CreateAPIView):
         ]
     )
     def post(self, request: Request, *args: Any, **kwargs: dict[str, Any]) -> Response:
+        # NOTE: (Joseph) we need to remove this code when done with this experiment
+        # before doing any data validation lets check if ER001 is still active
+        try:
+            er_config = ExperimentConfig.objects.get(
+                experiment_tag=ER_001_PRE_ALPHA_USER_TESTING_TAG, is_active=True
+            )
+        except ExperimentConfig.DoesNotExist:
+            logger.error(
+                "uia_backend::accounts::api::v1::views::UserRegistrationAPIView::"
+                " ExperimentConfig not found | is inactive.",
+                exc_info={"experiment_tag": ER_001_PRE_ALPHA_USER_TESTING_TAG},
+            )
+        else:
+            # next we need to check if experiment has reached its capacity
+            enrolled_user_count = PreAlphaUserTestingExperiment.objects.filter(
+                experiment_config=er_config
+            ).count()
+            if er_config.required_user_population <= enrolled_user_count:
+                return Response(
+                    data={
+                        "detail": "Sorry we cant register your account as pre-alpha testing is no longer active"
+                    },
+                    status=status.HTTP_406_NOT_ACCEPTABLE,
+                )
+
         return super().post(request, *args, **kwargs)
 
 
