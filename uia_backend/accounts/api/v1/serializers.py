@@ -7,7 +7,7 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.utils import timezone
 from rest_framework import serializers
-from rest_framework_simplejwt.tokens import AccessToken
+from rest_framework_simplejwt.tokens import RefreshToken
 
 from uia_backend.accounts import constants
 from uia_backend.accounts.models import (
@@ -235,6 +235,9 @@ class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField(max_length=250, required=True, write_only=True)
     password = serializers.CharField(max_length=250, required=True, write_only=True)
 
+    refresh_token = serializers.CharField(read_only=True)
+    auth_token = serializers.CharField(read_only=True)
+
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validate serializer data."""
         data = super().validate(attrs)
@@ -242,15 +245,14 @@ class LoginSerializer(serializers.Serializer):
         # check that active user with this email exits
         user = CustomUser.objects.filter(email=data["email"], is_active=True).first()
 
-        if user and user.check_password(raw_password=data["password"]):
-            data["user"] = user
-            return data
-        raise serializers.ValidationError(
-            "Invalid credentials or your account is inactive."
-        )
+        if not (user and user.check_password(raw_password=data["password"])):
+            raise serializers.ValidationError(
+                "Invalid credentials or your account is inactive."
+            )
 
-    def to_representation(self, instance: dict[str, Any]) -> dict[str, Any]:
-        data = {"auth_token": str(AccessToken.for_user(user=instance["user"]))}
+        refresh_token = RefreshToken.for_user(user=user)
+        data["refresh_token"] = str(refresh_token)
+        data["auth_token"] = str(refresh_token.access_token)
         return data
 
 

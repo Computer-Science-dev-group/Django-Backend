@@ -205,7 +205,7 @@ class LoginAPIView(generics.GenericAPIView):
                 value={
                     "status": "Success",
                     "code": 200,
-                    "data": {"auth_token": "jwt-token-asasasas"},
+                    "data": {"refresh_token": "string", "auth_token": "string"},
                 },
             )
         ]
