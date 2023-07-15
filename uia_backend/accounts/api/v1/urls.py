@@ -16,6 +16,7 @@ from uia_backend.accounts.api.v1.views import (
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
+    UserProfileDetailAPIView,
     UserProfileListView,
     UserRegistrationAPIView,
     VerifyResetPasswordAPIView,
@@ -55,6 +56,11 @@ urlpatterns = [
         "me/follows/list/",
         FollowerAndFollowingListAPIView.as_view(),
         name="user_follower_following_list"
+    ),
+    path(
+        "list/<uuid:user_id>/",
+        UserProfileDetailAPIView.as_view(),
+        name="accounts_detail",
     ),
     path(
         "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"

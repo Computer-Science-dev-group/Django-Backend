@@ -6,6 +6,7 @@ from urllib.parse import urlencode
 import responses
 from django.conf import settings
 from django.core import signing
+from django.core.cache import cache
 from django.urls import reverse
 from django.utils import timezone
 from rest_framework import serializers
@@ -18,9 +19,9 @@ from tests.accounts.test_models import (
     FriendShipInvitationFactory,
     PasswordResetAttemptFactory,
     UserFriendShipSettingsFactory,
-    UserHandleFactory,
     UserModelFactory,
 )
+from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
 from uia_backend.accounts.constants import (
     PASSWORD_RESET_ACTIVE_PERIOD,
     PASSWORD_RESET_TEMPLATE_ID,
@@ -33,6 +34,7 @@ from uia_backend.accounts.models import (
     UserFriendShipSettings,
 )
 from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
+from uia_backend.libs.testutils import get_test_image_file
 
 
 class UserRegistrationAPIViewTests(APITestCase):
@@ -254,9 +256,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.unfollow_url = reverse(
             "accounts_api_v1:user_unfollow", kwargs={"user_id": self.user_2.id}
         )
-        self.follows_list_url = reverse(
-            "accounts_api_v1:user_follower_following_list"
-        )
+        self.follows_list_url = reverse("accounts_api_v1:user_follower_following_list")
 
     def test_unauthenticated_user_cannot_follow(self):
         """Test if an unauthenticated user can follow other users."""
@@ -328,11 +328,8 @@ class UserProfileAPIViewTests(APITestCase):
     def setUp(self):
         self.url = reverse("accounts_api_v1:user_profile")
         self.user = UserModelFactory.create(is_active=True, is_verified=True)
-        self.user_handle = UserHandleFactory(
-            custom_user=self.user,
-        )
 
-    def test_unauthenticated_user_can_view_profile(self):
+    def test_unauthenticated_user_cant_view_profile(self):
         """Test if an unauthenticated user can view profile."""
 
         response = self.client.get(self.url, args=[self.user.id])
@@ -347,73 +344,7 @@ class UserProfileAPIViewTests(APITestCase):
             },
         )
 
-    def test_authenticated_user_can_view_profile(self):
-        """Test if an authenticated user can view profile."""
-
-        self.client.force_authenticate(user=self.user)
-        response = self.client.get(self.url, args=[self.user.id])
-        self.assertEqual(response.status_code, 200)
-        self.assertDictEqual(
-            dict(response.json()["data"]),
-            {
-                "first_name": self.user.first_name,
-                "last_name": self.user.last_name,
-                "profile_picture": None,
-                "cover_photo": None,
-                "faculty": self.user.faculty,
-                "department": self.user.department,
-                "year_of_graduation": self.user.year_of_graduation,
-                "bio": self.user.bio,
-                "gender": self.user.gender,
-                "display_name": self.user.display_name,
-                "phone_number": self.user.phone_number,
-                "date_of_birth": self.user.date_of_birth.isoformat(),
-                "handle": f"@{self.user.first_name.lower()}_{self.user.last_name.lower()}",
-            },
-        )
-
-    def test_if_authenticated_user_can_update_profile(self):
-        """Test if an authenticated user can update profile."""
-
-        user_data = {
-            "first_name": self.user.first_name,
-            "last_name": self.user.last_name,
-            "email": self.user.email,
-            "password": self.user.password,
-            "faculty": self.user.faculty,
-            "department": self.user.department,
-            "year_of_graduation": self.user.year_of_graduation,
-            "bio": "Hi, I am a graduate of Computer Science, UI",
-            "gender": "Male",
-            "display_name": "John Peters",
-            "phone_number": "08020444345",
-        }
-
-        self.client.force_authenticate(user=self.user)
-        response = self.client.put(path=self.url, data=user_data)
-
-        self.assertEqual(response.status_code, 200)
-
-        self.assertDictEqual(
-            response.json()["data"],
-            {
-                "first_name": user_data["first_name"],
-                "last_name": user_data["last_name"],
-                "faculty": user_data["faculty"],
-                "department": user_data["department"],
-                "bio": user_data["bio"],
-                "gender": user_data["gender"],
-                "display_name": user_data["display_name"],
-                "phone_number": user_data["phone_number"],
-                "date_of_birth": self.user.date_of_birth.isoformat(),
-                "cover_photo": None,
-                "profile_picture": None,
-                "year_of_graduation": user_data["year_of_graduation"],
-                "handle": f"@{user_data['first_name'].lower()}_{user_data['last_name'].lower()}",
-            },
-        )
-
-    def test_if_unauthenticated_user_can_update_profile(self):
+    def test_unauthenticated_user_cant_update_profile(self):
         """Test if an unauthenticated user can update profile."""
 
         user_data = {
@@ -441,6 +372,88 @@ class UserProfileAPIViewTests(APITestCase):
                 "data": {"detail": "Authentication credentials were not provided."},
             },
         )
+
+    def test_authenticated_user_can_view_profile(self):
+        """Test if an authenticated user can view profile."""
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.maxDiff = None
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.user.id),
+                    "first_name": self.user.first_name,
+                    "last_name": self.user.last_name,
+                    "profile_picture": None,
+                    "cover_photo": None,
+                    "faculty": self.user.faculty,
+                    "department": self.user.department,
+                    "year_of_graduation": self.user.year_of_graduation,
+                    "bio": self.user.bio,
+                    "gender": self.user.gender,
+                    "display_name": f"@{self.user.display_name.lower()}",
+                    "phone_number": self.user.phone_number,
+                    "date_of_birth": self.user.date_of_birth.isoformat(),
+                },
+            },
+        )
+
+    def test_if_authenticated_user_can_update_profile(self):
+        """Test if an authenticated user can update profile."""
+
+        user_data = {
+            "first_name": "Sapa",
+            "last_name": "Lord",
+            "cover_photo": get_test_image_file(),
+            "profile_picture": get_test_image_file(),
+            "bio": "Hi, I am a graduate of Computer Science, UI",
+            "gender": "Male",
+            "display_name": "_Nickel_12",
+            "phone_number": "08020444345",
+            "date_of_birth": timezone.now().date().isoformat(),
+        }
+
+        self.client.force_authenticate(user=self.user)
+        response = self.client.put(path=self.url, data=user_data, format="multipart")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.user.id),
+                    "first_name": "Sapa",
+                    "last_name": "Lord",
+                    "faculty": self.user.faculty,
+                    "department": self.user.department,
+                    "bio": user_data["bio"],
+                    "gender": user_data["gender"],
+                    "display_name": "@_nickel_12",
+                    "phone_number": user_data["phone_number"],
+                    "date_of_birth": user_data["date_of_birth"],
+                    "cover_photo": f"http://testserver/media/users/{self.user.id}/cover/image.png",
+                    "profile_picture": f"http://testserver/media/users/{self.user.id}/profile/image.png",
+                    "year_of_graduation": self.user.year_of_graduation,
+                },
+            },
+        )
+
+        # check that changes are reflected in the DB
+        self.user.refresh_from_db()
+        self.assertEqual(self.user.first_name, "Sapa")
+        self.assertEqual(self.user.last_name, "Lord")
+        self.assertEqual(self.user.bio, "Hi, I am a graduate of Computer Science, UI")
+        self.assertEqual(self.user.gender, "Male")
+        self.assertEqual(self.user.display_name, "_nickel_12")
+        self.assertEqual(self.user.phone_number, "08020444345")
+        self.assertEqual(self.user.date_of_birth, timezone.now().date())
 
 
 class ChangePasswordAPIViewTests(APITestCase):
@@ -1447,6 +1460,10 @@ class UserProfileListAPIViewTests(APITestCase):
         self.client.force_authenticate(user=self.user)
         self.url = reverse("accounts_api_v1:accounts_list")
 
+    def tearDown(self):
+        super().tearDown()
+        cache.clear()
+
     def test_unauthenticated_user_can_view_search(self):
         """Test if an unauthenticated user can search."""
         self.client.force_authenticate(user=None)
@@ -1468,36 +1485,8 @@ class UserProfileListAPIViewTests(APITestCase):
             "status": "Success",
             "code": 200,
             "data": [
-                {
-                    "first_name": self.user.first_name,
-                    "last_name": self.user.last_name,
-                    "profile_picture": None,
-                    "cover_photo": None,
-                    "phone_number": self.user.phone_number,
-                    "display_name": self.user.display_name,
-                    "year_of_graduation": self.user.year_of_graduation,
-                    "department": self.user.department,
-                    "faculty": self.user.faculty,
-                    "bio": None,
-                    "gender": None,
-                    "date_of_birth": self.user.date_of_birth.isoformat(),
-                    "handle": None,
-                },
-                {
-                    "first_name": self.user_2.first_name,
-                    "last_name": self.user_2.last_name,
-                    "profile_picture": None,
-                    "cover_photo": None,
-                    "phone_number": self.user_2.phone_number,
-                    "display_name": self.user_2.display_name,
-                    "year_of_graduation": self.user_2.year_of_graduation,
-                    "department": self.user_2.department,
-                    "faculty": self.user_2.faculty,
-                    "bio": None,
-                    "gender": None,
-                    "date_of_birth": self.user_2.date_of_birth.isoformat(),
-                    "handle": None,
-                },
+                dict(UserProfileSerializer().to_representation(instance=self.user)),
+                dict(UserProfileSerializer().to_representation(instance=self.user_2)),
             ],
         }
         response = self.client.get(self.url)
@@ -1517,23 +1506,10 @@ class UserProfileListAPIViewTests(APITestCase):
             "status": "Success",
             "code": 200,
             "data": [
-                {
-                    "first_name": self.user_2.first_name,
-                    "last_name": self.user_2.last_name,
-                    "profile_picture": None,
-                    "cover_photo": None,
-                    "phone_number": self.user_2.phone_number,
-                    "display_name": self.user_2.display_name,
-                    "year_of_graduation": self.user_2.year_of_graduation,
-                    "department": self.user_2.department,
-                    "faculty": self.user_2.faculty,
-                    "bio": None,
-                    "gender": None,
-                    "date_of_birth": self.user_2.date_of_birth.isoformat(),
-                    "handle": None,
-                },
+                dict(UserProfileSerializer().to_representation(instance=self.user_2))
             ],
         }
+
         response = self.client.get(url_with_params)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)

@@ -1,4 +1,3 @@
-import factory
 from django.test import TestCase
 from django.utils import timezone
 from factory.django import DjangoModelFactory
@@ -10,7 +9,6 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     PasswordResetAttempt,
     UserFriendShipSettings,
-    UserHandle,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -103,16 +101,3 @@ class FriendShipFactory(DjangoModelFactory):
 class UserFriendShipSettingsFactory(DjangoModelFactory):
     class Meta:
         model = UserFriendShipSettings
-
-
-class UserHandleFactory(DjangoModelFactory):
-    custom_user = factory.SubFactory(UserModelFactory)
-    user_handle = factory.LazyAttribute(
-        lambda obj: "@"
-        + obj.custom_user.first_name.lower()
-        + "_"
-        + obj.custom_user.last_name.lower()
-    )
-
-    class Meta:
-        model = UserHandle

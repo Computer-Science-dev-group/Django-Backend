@@ -14,6 +14,7 @@ from tests.cluster.test_models import (
     ClusterMembershipFactory,
     InternalClusterFactory,
 )
+from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
 from uia_backend.cluster.constants import (
     ADD_CLUSTER_MEMBER_PERMISSION,
     REMOVE_CLUSTER_MEMBER_PERMISSION,
@@ -411,39 +412,15 @@ class ClusterMembershipListAPIViewTests(APITestCase):
             "data": [
                 {
                     "id": str(self.membership.id),
-                    "user": {
-                        "first_name": self.user.first_name,
-                        "last_name": self.user.last_name,
-                        "profile_picture": None,
-                        "cover_photo": None,
-                        "phone_number": self.user.phone_number,
-                        "display_name": self.user.display_name,
-                        "year_of_graduation": self.user.year_of_graduation,
-                        "department": self.user.department,
-                        "faculty": self.user.faculty,
-                        "bio": self.user.bio,
-                        "gender": self.user.gender,
-                        "date_of_birth": self.user.date_of_birth.isoformat(),
-                        "handle": None,
-                    },
+                    "user": dict(
+                        UserProfileSerializer().to_representation(instance=self.user)
+                    ),
                 },
                 {
                     "id": str(membership_1.id),
-                    "user": {
-                        "first_name": member_1.first_name,
-                        "last_name": member_1.last_name,
-                        "profile_picture": None,
-                        "cover_photo": None,
-                        "phone_number": member_1.phone_number,
-                        "display_name": member_1.display_name,
-                        "year_of_graduation": member_1.year_of_graduation,
-                        "department": member_1.department,
-                        "faculty": member_1.faculty,
-                        "bio": member_1.bio,
-                        "gender": member_1.gender,
-                        "date_of_birth": member_1.date_of_birth.isoformat(),
-                        "handle": None,
-                    },
+                    "user": dict(
+                        UserProfileSerializer().to_representation(instance=member_1)
+                    ),
                 },
             ],
         }
@@ -535,21 +512,9 @@ class ClusterMembersDetailAPIViewTests(APITestCase):
             "code": 200,
             "data": {
                 "id": str(self.membership.id),
-                "user": {
-                    "first_name": self.user.first_name,
-                    "last_name": self.user.last_name,
-                    "profile_picture": None,
-                    "cover_photo": None,
-                    "phone_number": self.user.phone_number,
-                    "display_name": self.user.display_name,
-                    "year_of_graduation": self.user.year_of_graduation,
-                    "department": self.user.department,
-                    "faculty": self.user.faculty,
-                    "bio": self.user.bio,
-                    "gender": self.user.gender,
-                    "date_of_birth": self.user.date_of_birth.isoformat(),
-                    "handle": None,
-                },
+                "user": dict(
+                    UserProfileSerializer().to_representation(instance=self.user)
+                ),
             },
         }
 

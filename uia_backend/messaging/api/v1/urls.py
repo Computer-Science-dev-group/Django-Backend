@@ -3,7 +3,9 @@ from django.urls import path
 from uia_backend.messaging.api.v1.views import (
     CommentListAPIView,
     FileUploadAPIView,
+    LikeDetailAPIView,
     PostDetailsAPIView,
+    PostLikeListAPIView,
     PostListAPIView,
     RepliesListAPIView,
 )
@@ -18,6 +20,16 @@ urlpatterns = [
         "<uuid:cluster_id>/posts/<uuid:post_id>/",
         PostDetailsAPIView.as_view(),
         name="cluster_post_details",
+    ),
+    path(
+        "<uuid:cluster_id>/posts/<uuid:post_id>/likes/",
+        PostLikeListAPIView.as_view(),
+        name="post_like_list",
+    ),
+    path(
+        "<uuid:cluster_id>/posts/<uuid:post_id>/likes/<uuid:like_id>/",
+        LikeDetailAPIView.as_view(),
+        name="post_like_details",
     ),
     path(
         "<uuid:cluster_id>/posts/<uuid:post_id>/comments/",

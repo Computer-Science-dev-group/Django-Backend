@@ -1,5 +1,4 @@
 import logging
-import random
 import secrets
 from uuid import UUID
 
@@ -12,7 +11,7 @@ from django.utils import timezone
 from rest_framework.request import Request
 
 from uia_backend.accounts import constants
-from uia_backend.accounts.models import CustomUser, EmailVerification, UserHandle
+from uia_backend.accounts.models import CustomUser, EmailVerification
 from uia_backend.notification.tasks import send_template_email_task
 
 Logger = logging.getLogger()
@@ -129,36 +128,3 @@ def send_password_reset_otp_email_notification(
             },
         },
     )
-
-
-def user_handle(
-    user: CustomUser, first_name: str, last_name: str, stage: str
-) -> UserHandle:
-    """This for creating and updating user handle"""
-    user_handle = "@" + first_name.lower() + "_" + last_name.lower()
-    if stage == constants.HANDLE_CREATION:
-        handle = UserHandle.objects.filter(user_handle=user_handle)
-        if handle.exists():
-            random_number = random.randrange(123, 567890)
-            user_handle = (
-                "@" + first_name.lower() + "_" + last_name.lower() + str(random_number)
-            )
-            UserHandle.objects.create(custom_user=user, user_handle=user_handle)
-        else:
-            UserHandle.objects.create(custom_user=user, user_handle=user_handle)
-
-    elif stage == constants.HANDLE_UPDATE:
-        user_handle_object = UserHandle.objects.get(custom_user=user)
-        handle = UserHandle.objects.filter(user_handle=user_handle)
-        if handle.exists():
-            random_number = random.randrange(1234, 567890)
-            user_handle = (
-                "@" + first_name.lower() + "_" + last_name.lower() + str(random_number)
-            )
-            user_handle_object.user_handle = user_handle
-            user_handle_object.save()
-        else:
-            user_handle_object.user_handle = user_handle
-            user_handle_object.save()
-        return user_handle
-    return user_handle

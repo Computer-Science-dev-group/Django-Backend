@@ -25,14 +25,12 @@ class GenericNotificationRelatedField(serializers.RelatedField):
 class NotificationSerializer(serializers.ModelSerializer[NotificationModel]):
     actor = GenericNotificationRelatedField(read_only=True)
     target = GenericNotificationRelatedField(read_only=True)
-    recipient = UserProfileSerializer(read_only=True)
     data = serializers.JSONField(read_only=True)
 
     class Meta:
         model = NotificationModel
         fields = [
             "id",
-            "recipient",
             "type",
             "verb",
             "timestamp",
@@ -43,7 +41,6 @@ class NotificationSerializer(serializers.ModelSerializer[NotificationModel]):
         ]
         read_only_fields = [
             "id",
-            "recipient",
             "type",
             "verb",
             "timestamp",

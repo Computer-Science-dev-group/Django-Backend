@@ -7,6 +7,7 @@ from rest_framework.test import APITestCase
 
 from tests.accounts.test_models import UserModelFactory
 from tests.notification.test_models import NotificationModelFactory
+from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
 
 
 class NotificationListAPIViewTests(APITestCase):
@@ -54,21 +55,9 @@ class NotificationListAPIViewTests(APITestCase):
             data={"msg": "Well hello there"},
         )
 
-        user_profile_data = {
-            "first_name": self.user.first_name,
-            "last_name": self.user.last_name,
-            "profile_picture": None,
-            "cover_photo": None,
-            "phone_number": self.user.phone_number,
-            "display_name": self.user.display_name,
-            "year_of_graduation": self.user.year_of_graduation,
-            "department": self.user.department,
-            "faculty": self.user.faculty,
-            "bio": self.user.bio,
-            "gender": self.user.gender,
-            "date_of_birth": self.user.date_of_birth.isoformat(),
-            "handle": None,
-        }
+        user_profile_data = dict(
+            UserProfileSerializer().to_representation(instance=self.user)
+        )
 
         response = self.client.get(path=self.url)
         self.assertEqual(response.status_code, 200)
@@ -84,7 +73,6 @@ class NotificationListAPIViewTests(APITestCase):
                 "data": [
                     {
                         "id": str(notification_record.id),
-                        "recipient": user_profile_data,
                         "type": "",
                         "verb": "Some cool action",
                         "timestamp": serializers.DateTimeField().to_representation(
@@ -134,21 +122,10 @@ class NotificationDetailAPIViewTests(APITestCase):
             type="",
             data={"msg": "Well hello there"},
         )
-        self.user_profile_data = {
-            "first_name": self.user.first_name,
-            "last_name": self.user.last_name,
-            "profile_picture": None,
-            "cover_photo": None,
-            "phone_number": self.user.phone_number,
-            "display_name": self.user.display_name,
-            "year_of_graduation": self.user.year_of_graduation,
-            "department": self.user.department,
-            "faculty": self.user.faculty,
-            "bio": self.user.bio,
-            "gender": self.user.gender,
-            "date_of_birth": self.user.date_of_birth.isoformat(),
-            "handle": None,
-        }
+        self.maxDiff = None
+        self.user_profile_data = dict(
+            UserProfileSerializer().to_representation(instance=self.user)
+        )
         self.url = reverse(
             "notification_api_v1:notification_details",
             args=[str(self.notification_record.id)],
@@ -181,7 +158,6 @@ class NotificationDetailAPIViewTests(APITestCase):
                 "code": 200,
                 "data": {
                     "id": str(self.notification_record.id),
-                    "recipient": self.user_profile_data,
                     "type": "",
                     "verb": "Some cool action",
                     "timestamp": serializers.DateTimeField().to_representation(
@@ -234,7 +210,6 @@ class NotificationDetailAPIViewTests(APITestCase):
                 "code": 200,
                 "data": {
                     "id": str(self.notification_record.id),
-                    "recipient": self.user_profile_data,
                     "type": "",
                     "verb": "Some cool action",
                     "timestamp": serializers.DateTimeField().to_representation(

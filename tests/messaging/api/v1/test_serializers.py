@@ -10,6 +10,7 @@ from uia_backend.libs.testutils import CustomSerializerTests, get_test_image_fil
 from uia_backend.messaging.api.v1.serializers import (
     CommentSerializer,
     FileModelSerializer,
+    LikeSerializer,
     PostSerializer,
 )
 from uia_backend.messaging.models import FileModel
@@ -286,3 +287,14 @@ class FileModelSerializerTests(CustomSerializerTests):
                 "context": None,
             },
         ]
+
+
+class LikeSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = LikeSerializer
+    REQUIRED_FIELDS = []
+    NON_REQUIRED_FIELDS = ["id", "created_by", "created_datetime"]
+
+    INVALID_DATA = []
+    VALID_DATA = []
