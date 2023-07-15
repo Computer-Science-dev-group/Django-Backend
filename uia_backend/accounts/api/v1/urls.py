@@ -55,7 +55,7 @@ urlpatterns = [
     path(
         "me/follows/list/",
         FollowerAndFollowingListAPIView.as_view(),
-        name="user_follower_following_list"
+        name="user_follower_following_list",
     ),
     path(
         "list/<uuid:user_id>/",
