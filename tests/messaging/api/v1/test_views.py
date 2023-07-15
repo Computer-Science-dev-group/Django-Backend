@@ -5,7 +5,12 @@ from rest_framework.test import APITestCase
 
 from tests.accounts.test_models import UserModelFactory
 from tests.cluster.test_models import ClusterFactory, ClusterMembershipFactory
-from tests.messaging.test_models import CommentFactory, FileModelFactory, PostFactory
+from tests.messaging.test_models import (
+    CommentFactory,
+    FileModelFactory,
+    LikeFactory,
+    PostFactory,
+)
 from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
 from uia_backend.cluster.constants import (
     UPDATE_CLUSTER_PERMISSION,
@@ -13,7 +18,7 @@ from uia_backend.cluster.constants import (
 )
 from uia_backend.libs.permissions import assign_object_permissions
 from uia_backend.libs.testutils import get_test_image_file
-from uia_backend.messaging.models import Comment, FileModel, Post
+from uia_backend.messaging.models import Comment, FileModel, Like, Post
 
 
 class PostListAPIViewTests(APITestCase):
@@ -252,7 +257,6 @@ class PostListAPIViewTests(APITestCase):
         )
 
         response = self.client.get(path=self.url)
-        self.maxDiff = None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
@@ -438,6 +442,276 @@ class PostDetailsAPIViewTests(APITestCase):
         self.assertFalse(Post.objects.all().exists())
 
 
+class PostLikeListAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create()
+        self.cluster = ClusterFactory.create()
+
+        ClusterMembershipFactory(user=self.user, cluster=self.cluster)
+
+        self.file = FileModelFactory.create(
+            file_type=FileModel.FILE_TYPE_IMAGE,
+            file=get_test_image_file(),
+            created_by=self.user,
+        )
+
+        self.post = PostFactory.create(created_by=self.user, cluster=self.cluster)
+
+        self.url = reverse(
+            "messaging_api_v1:post_like_list",
+            args=[self.cluster.id, self.post.id],
+        )
+
+        assign_object_permissions(
+            permissions=[VIEW_CLUSTER_PERMISSION, UPDATE_CLUSTER_PERMISSION],
+            assignee=self.user,
+            obj=self.cluster,
+        )
+
+    def test_list_fails_for_unauthenticated_user(self):
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_post_fails_for_unauthenticated_user(self):
+        response = self.client.post(path=self.url, data={})
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_list_fails_for_non_cluster_member(self):
+        user = UserModelFactory.create(email="micope@example.com")
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 403,
+                "data": {
+                    "detail": "You do not have permission to perform this action."
+                },
+            },
+        )
+
+    def test_list_likes_successfully(self):
+        self.client.force_authenticate(self.user)
+        # post likes (should be listed)
+        to_be_listed = LikeFactory.create_batch(
+            post=self.post, created_by=self.user, size=3
+        )
+
+        # another posts likes (should not be listed)
+        another_post = PostFactory.create(created_by=self.user, cluster=self.cluster)
+        LikeFactory.create_batch(post=another_post, created_by=self.user, size=4)
+
+        response = self.client.get(path=self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 3,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "id": str(like.id),
+                        "created_by": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=like.created_by
+                            )
+                        ),
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            value=like.created_datetime
+                        ),
+                    }
+                    for like in Like.objects.filter(
+                        id__in=[_.id for _ in to_be_listed]
+                    ).order_by("-created_datetime")
+                ],
+            },
+        )
+
+    def test_create_like_successfully(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.post(path=self.url, data={})
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            Like.objects.filter(post=self.post, created_by=self.user).count(), 1
+        )
+        like = Like.objects.all().first()
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {
+                    "id": str(like.id),
+                    "created_by": dict(
+                        UserProfileSerializer().to_representation(
+                            instance=like.created_by
+                        )
+                    ),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        value=like.created_datetime
+                    ),
+                },
+            },
+        )
+
+
+class LikeDetailAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create()
+        self.cluster = ClusterFactory.create()
+
+        ClusterMembershipFactory(user=self.user, cluster=self.cluster)
+
+        self.post = PostFactory.create(created_by=self.user, cluster=self.cluster)
+
+        self.like = LikeFactory.create(created_by=self.user, post=self.post)
+
+        self.url = reverse(
+            "messaging_api_v1:post_like_details",
+            args=[self.cluster.id, self.post.id, self.like.id],
+        )
+
+        assign_object_permissions(
+            permissions=[VIEW_CLUSTER_PERMISSION, UPDATE_CLUSTER_PERMISSION],
+            assignee=self.user,
+            obj=self.cluster,
+        )
+
+    def test_fails_for_unauthenticated_user(self):
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_retrieve_fails_for_non_cluster_member(self):
+        user = UserModelFactory.create(email="micope@example.com")
+        self.client.force_authenticate(user=user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 403,
+                "data": {
+                    "detail": "You do not have permission to perform this action."
+                },
+            },
+        )
+
+    def test_delete_fails_non_cluster_member(self):
+        user = UserModelFactory.create(email="micope@example.com")
+        self.client.force_authenticate(user=user)
+
+        response = self.client.delete(path=self.url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 403,
+                "data": {
+                    "detail": "You do not have permission to perform this action."
+                },
+            },
+        )
+
+    def test_delete_fails_if_user_is_not_like_creator(self):
+        user = UserModelFactory.create(email="micope@example.com")
+        ClusterMembershipFactory(user=user, cluster=self.cluster)
+        assign_object_permissions(
+            permissions=[VIEW_CLUSTER_PERMISSION, UPDATE_CLUSTER_PERMISSION],
+            assignee=user,
+            obj=self.cluster,
+        )
+
+        self.client.force_authenticate(user=user)
+
+        response = self.client.delete(path=self.url)
+
+        self.assertEqual(response.status_code, 403)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 403,
+                "data": {
+                    "detail": "You do not have permission to perform this action."
+                },
+            },
+        )
+
+    def test_retrieve_successfully(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.like.id),
+                    "created_by": dict(
+                        UserProfileSerializer().to_representation(
+                            instance=self.like.created_by
+                        )
+                    ),
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        value=self.like.created_datetime
+                    ),
+                },
+            },
+        )
+
+    def test_delete_like_successfully(self):
+        self.client.force_authenticate(self.user)
+
+        response = self.client.delete(path=self.url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertFalse(Like.objects.filter(id=self.like.id).exists())
+
+
 class CommentListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
@@ -564,7 +838,7 @@ class CommentListAPIViewTests(APITestCase):
                         "replying": None,
                         "created_by": dict(
                             UserProfileSerializer().to_representation(
-                                instance=self.user
+                                instance=comment.created_by
                             )
                         ),
                         "created_datetime": serializers.DateTimeField().to_representation(
@@ -650,6 +924,8 @@ class RepliesListAPIViewTests(APITestCase):
             assignee=self.user,
             obj=self.cluster,
         )
+
+        self.maxDiff = None
 
     def test_fails_for_unauthenticated_user(self):
         response = self.client.get(path=self.url)
@@ -757,7 +1033,7 @@ class RepliesListAPIViewTests(APITestCase):
                         "replying": str(self.comment.id),
                         "created_by": dict(
                             UserProfileSerializer().to_representation(
-                                instance=self.user
+                                instance=comment.created_by
                             )
                         ),
                         "created_datetime": serializers.DateTimeField().to_representation(
