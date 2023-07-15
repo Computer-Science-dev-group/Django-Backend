@@ -24,7 +24,7 @@ from uia_backend.accounts.api.v1.serializers import (
     VerifyResetPasswordOTPSerializer,
 )
 from uia_backend.accounts.models import PasswordResetAttempt
-from uia_backend.libs.testutils import CustomSerializerTests
+from uia_backend.libs.testutils import CustomSerializerTests, get_test_image_file
 
 
 class UserRegistrationSerializerTests(CustomSerializerTests):
@@ -165,82 +165,118 @@ class UserProfileSerializerTests(CustomSerializerTests):
 
     serializer_class = UserProfileSerializer
 
-    REQUIRED_FIELDS = [
-        "first_name",
-        "last_name",
-        "display_name",
-    ]
+    REQUIRED_FIELDS = ["first_name", "last_name", "display_name", "gender"]
 
     NON_REQUIRED_FIELDS = [
+        "id",
         "profile_picture",
         "cover_photo",
         "phone_number",
         "bio",
-        "gender",
         "date_of_birth",
         "year_of_graduation",
         "department",
         "faculty",
-        "handle",
     ]
 
-    VALID_DATA = [
-        {
-            "data": {
-                "first_name": "John",
-                "last_name": "Doe",
-                "email": "user@example.com",
-                "password": "f_g68Ata7jPqqmm",
-                "faculty": "Science",
-                "department": "Computer Science",
-                "year_of_graduation": "2001",
-                "bio": "Hi, I am a graduate of Computer Science, UI",
-                "gender": "Male",
-                "display_name": "John Peters",
-                "phone_number": "08020444345",
-            },
-        },
-    ]
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create()
+        request = MagicMock()
+        request.user = self.user
 
-    INVALID_DATA = [
-        {
-            "data": {
-                "first_name": "",
-                "last_name": "",
-                "email": "user@example.com",
-                "faculty": "Science",
-                "department": "Computer Science",
-                "year_of_graduation": "1901",
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "bio": "Hi, I am a graduate of Computer Science, UI",
+                    "gender": "Male",
+                    "display_name": "John-Peters",
+                    "phone_number": "08020444345",
+                    "cover_photo": get_test_image_file(),
+                    "profile_picture": get_test_image_file(),
+                },
+                "label": "Test valid data with all write fields",
+                "context": {"request": request},
             },
-            "lable": "Test first_name and last_name failed",
-            "context": None,
-        },
-        {
-            "data": {
-                "first_name": "John",
-                "last_name": "Doe",
-                "email": "user@example.com",
-                "password": "f_g68Ata7jPqqmm",
-                "faculty": "Science",
-                "department": "",
-                "year_of_graduation": "2s21",
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "bio": "Hi, I am a graduate of Computer Science, UI",
+                    "gender": "Female",
+                    "display_name": "John_Peters",
+                    "phone_number": "08020444345",
+                    "cover_photo": get_test_image_file(),
+                    "profile_picture": get_test_image_file(),
+                },
+                "label": "Test valid data with all write fields",
+                "context": {"request": request},
             },
-            "lable": "Test writing to department field failed",
-            "context": None,
-        },
-        {
-            "data": {
-                "first_name": "John",
-                "last_name": "Doe",
-                "email": "user@example.com",
-                "faculty": "",
-                "department": "Computer Science",
-                "year_of_graduation": "2001",
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "display_name": "_John-Peters_",
+                    "gender": "Male",
+                },
+                "label": "Test valid data with required fields.",
+                "context": {"request": request},
             },
-            "lable": "Test writing to faculty field failed",
-            "context": None,
-        },
-    ]
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "first_name": "",
+                    "last_name": "Assas",
+                    "display_name": "Johnsnow",
+                    "gender": "Male",
+                },
+                "lable": "Test first_name is required",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "",
+                    "display_name": "Johnsnow",
+                    "gender": "Male",
+                },
+                "lable": "Test last_name is required",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "display_name": "",
+                    "gender": "Male",
+                },
+                "lable": "Test display_name is required",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "display_name": "Johnsnow",
+                    "gender": "",
+                },
+                "lable": "Test gener is required",
+                "context": {"request": request},
+            },
+            {
+                "data": {
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "display_name": "Johnsnow",
+                    "gender": "Stray",
+                },
+                "lable": "Test invalid gender option",
+                "context": {"request": request},
+            },
+        ]
 
 
 class ChangePasswordSerializerTests(CustomSerializerTests):

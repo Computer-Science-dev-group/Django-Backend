@@ -11,7 +11,6 @@ class NotificationSerializerTests(CustomSerializerTests):
 
     NON_REQUIRED_FIELDS = [
         "id",
-        "recipient",
         "type",
         "verb",
         "timestamp",

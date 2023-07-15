@@ -131,11 +131,13 @@ class EmailVerificationAPIView(generics.GenericAPIView):
 
 
 class UserProfileAPIView(generics.RetrieveUpdateAPIView):
+    """Retrieve/Update authenticated users profile."""
+
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     http_method_names = ["get", "put"]
 
-    def get_object(self) -> Any:
+    def get_object(self) -> CustomUser:
         return self.request.user
 
     @transaction.atomic()
@@ -148,6 +150,7 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
                     "info": "Success",
                     "code": 200,
                     "data": {
+                        "id": "string",
                         "first_name": "string",
                         "last_name": "string",
                         "faculty": "string",
@@ -177,6 +180,7 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
                     "info": "Success",
                     "code": 200,
                     "data": {
+                        "id": "string",
                         "first_name": "string",
                         "last_name": "string",
                         "profile_picture": "path/image.png",
@@ -285,15 +289,31 @@ class ResetPasswordAPIView(generics.GenericAPIView):
 
 
 class UserProfileListView(generics.ListAPIView):
+    """List profiles of active all user."""
+
     queryset = CustomUser.objects.filter(is_active=True)
     serializer_class = UserProfileSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
-    search_fields = ["first_name", "last_name"]
+    search_fields = ["first_name", "last_name", "display_name"]
 
     @method_decorator(cache_page(CACHE_DURATION))
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().get(request, *args, **kwargs)
+    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        return super().list(request, *args, **kwargs)
+
+
+class UserProfileDetailAPIView(generics.RetrieveAPIView):
+    """Retrieve a users profile."""
+
+    serializer_class = UserProfileSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self) -> CustomUser:
+        return get_object_or_404(
+            CustomUser,
+            id=self.kwargs["user_id"],
+            is_active=True,
+        )
 
 
 class FriendShipInvitationListAPIView(generics.ListCreateAPIView):
@@ -356,23 +376,6 @@ class UserFriendShipsDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
             id=self.kwargs["pk"],
             user=self.request.user,
         )
-
-
-class UserProfileSearchView(generics.ListAPIView):
-    queryset = CustomUser.objects.all()
-    serializer_class = UserProfileSerializer
-
-    def get_queryset(self):
-        queryset = super().get_queryset()
-        name = self.kwargs.get("name")
-        queryset = queryset.filter(
-            Q(first_name__startswith=name) | Q(last_name__startswith=name)
-        ).distinct()
-        return queryset
-
-    @method_decorator(cache_page(CACHE_DURATION))
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().get(request, *args, **kwargs)
 
 
 # NOTE (Joseph): This view only work on posgres DB (We need to find a better implementation)

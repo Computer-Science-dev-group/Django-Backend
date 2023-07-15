@@ -7,7 +7,7 @@ from rest_framework import serializers
 
 from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
 from uia_backend.libs.serializers import DynamicFieldsModelSerializer
-from uia_backend.messaging.models import Comment, FileModel, Post
+from uia_backend.messaging.models import Comment, FileModel, Like, Post
 
 
 class FileModelSerializer(DynamicFieldsModelSerializer[FileModel]):
@@ -192,3 +192,12 @@ class CommentSerializer(serializers.ModelSerializer[Comment]):
         data["replies"] = instance.replies.all().count()
         data["liked_by_user"] = instance.likes.filter(created_by=user).exists()
         return data
+
+
+class LikeSerializer(serializers.ModelSerializer[Like]):
+    created_by = UserProfileSerializer(read_only=True)
+
+    class Meta:
+        model = Like
+        fields = ["id", "created_by", "created_datetime"]
+        read_only_fields = ["id", "created_by", "created_datetime"]

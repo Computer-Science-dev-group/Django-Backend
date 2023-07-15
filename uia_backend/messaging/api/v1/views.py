@@ -13,9 +13,10 @@ from uia_backend.messaging.api.v1.permission import ClusterPostPermission
 from uia_backend.messaging.api.v1.serializers import (
     CommentSerializer,
     FileModelSerializer,
+    LikeSerializer,
     PostSerializer,
 )
-from uia_backend.messaging.models import Comment, Post
+from uia_backend.messaging.models import Comment, Like, Post
 
 
 class PostListAPIView(generics.ListCreateAPIView):
@@ -74,6 +75,66 @@ class PostDetailsAPIView(generics.RetrieveDestroyAPIView):
         self.check_object_permissions(request=self.request, obj=post.cluster)
 
         return post
+
+
+class PostLikeListAPIView(generics.ListCreateAPIView):
+    serializer_class = LikeSerializer
+    permission_classes = [
+        permissions.IsAuthenticated,
+        ClusterPostPermission,
+    ]
+
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ["created_datetime"]
+    ordering = ["-created_datetime"]
+
+    def get_object(self) -> Cluster:
+        post = get_object_or_404(
+            Post.objects.prefetch_related("cluster"),
+            id=self.kwargs["post_id"],
+            cluster_id=self.kwargs["cluster_id"],
+        )
+        self.check_object_permissions(request=self.request, obj=post.cluster)
+        return post
+
+    def get_queryset(self) -> QuerySet[Like]:
+        post = self.get_object()
+        return Like.objects.filter(post=post)
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        self.get_object()
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer: LikeSerializer) -> None:
+        serializer.save(
+            created_by=self.request.user,
+            post_id=self.kwargs["post_id"],
+        )
+
+
+class LikeDetailAPIView(generics.RetrieveDestroyAPIView):
+    serializer_class = LikeSerializer
+    permission_classes = [
+        permissions.IsAuthenticated,
+        ClusterPostPermission,
+    ]
+
+    def get_object(self) -> Like:
+        like = get_object_or_404(
+            Like.objects.prefetch_related("post"),
+            id=self.kwargs["like_id"],
+            post_id=self.kwargs["post_id"],
+        )
+
+        # NOTE: (Joseph) for now lets handle it this way
+        # so only a user can delete their post
+        if (like.created_by_id != self.request.user.id) and (
+            self.request.method.upper() == "DELETE"
+        ):
+            self.permission_denied(request=self.request)
+
+        self.check_object_permissions(request=self.request, obj=like.post.cluster)
+        return like
 
 
 class CommentListAPIView(generics.ListCreateAPIView):

@@ -5,6 +5,7 @@ from typing import Any
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
 from django.core.exceptions import ValidationError
+from django.core.validators import RegexValidator
 from django.utils import timezone
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -23,7 +24,6 @@ from uia_backend.accounts.utils import (
     send_password_reset_otp_email_notification,
     send_user_password_change_email_notification,
     send_user_registration_email_verification_mail,
-    user_handle,
 )
 from uia_backend.cluster.utils import ClusterManager
 from uia_backend.experiments.utils import enroll_user_to_prealpha_testing_experiment
@@ -84,12 +84,6 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
         user.set_password(validated_data["password"])
         user.save(update_fields=["password"])
         password_changed(user=user, password=validated_data["password"])
-        user_handle(
-            user,
-            validated_data["first_name"],
-            validated_data["last_name"],
-            constants.HANDLE_CREATION,
-        )
         send_user_registration_email_verification_mail(
             user, request=self.context["request"]
         )
@@ -150,11 +144,22 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     """Serializer for the Custom User Profile"""
 
-    handle = serializers.CharField(source="userhandle__user_handle", read_only=True)
+    GENDER_CHOICES = ["Male", "Female"]
+    gender = serializers.ChoiceField(choices=GENDER_CHOICES)
+
+    display_name_validator = RegexValidator(
+        r"^[0-9a-zA-Z_-]*$", "Only alphanumeric characters and '_' or '-'] are allowed."
+    )
+    display_name = serializers.CharField(
+        max_length=20,
+        validators=[display_name_validator],
+        trim_whitespace=True,
+    )
 
     class Meta:
         model = CustomUser
         fields = [
+            "id",
             "first_name",
             "last_name",
             "profile_picture",
@@ -167,34 +172,39 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "bio",
             "gender",
             "date_of_birth",
-            "handle",
         ]
-        read_only_fields = ["year_of_graduation", "department", "faculty", "handle"]
 
-    def update(
-        self, instance: CustomUser, validated_data: dict[str, Any]
-    ) -> CustomUser:
-        """
-        Update the profile for an existing `CustomUser` instance, given the validated data.
-        """
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
+        read_only_fields = [
+            "id",
+            "year_of_graduation",
+            "department",
+            "faculty",
+        ]
 
-        # Below is for changing user handle due to change in either first_name or last_name
+    def create(self, validated_data: Any) -> Any:
+        """Overidden method."""
+
+    def validate_display_name(self, value: str) -> str:
+        """Validate display_name."""
+
         user = self.context["request"].user
-        user_handle(
-            user,
-            validated_data["first_name"],
-            validated_data["last_name"],
-            constants.HANDLE_UPDATE,
-        )
-        return instance
 
-    def to_representation(self, instance: Any) -> Any:
+        # check that display_name is not in use by another user
+        if (
+            CustomUser.objects.filter(
+                display_name__iexact=value,
+            )
+            .exclude(id=user.id)
+            .exists()
+        ):
+            serializers.ValidationError(f"`{value}` already in use by another user.")
+
+        return value.lower()
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
         data = super().to_representation(instance)
-        data["handle"] = (
-            instance.userhandle.user_handle if hasattr(instance, "userhandle") else None
+        data["display_name"] = (
+            f"@{instance.display_name.lower()}" if instance.display_name else None
         )
         return data
 

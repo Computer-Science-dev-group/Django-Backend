@@ -13,6 +13,7 @@ from uia_backend.accounts.api.v1.views import (
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
+    UserProfileDetailAPIView,
     UserProfileListView,
     UserRegistrationAPIView,
     VerifyResetPasswordAPIView,
@@ -44,6 +45,11 @@ urlpatterns = [
         "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),
     path("list/", UserProfileListView.as_view(), name="accounts_list"),
+    path(
+        "list/<uuid:user_id>/",
+        UserProfileDetailAPIView.as_view(),
+        name="accounts_detail",
+    ),
     path(
         "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"
     ),
