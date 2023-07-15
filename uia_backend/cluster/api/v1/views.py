@@ -38,8 +38,10 @@ class ClusterListCreateAPIView(generics.ListCreateAPIView):
 
     serializer_class = ClusterSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, filters.SearchFilter]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["title"]
+    ordering_fields = ["title", "created_datetime"]
+    ordering = ["-created_datetime"]
 
     @extend_schema(
         examples=[
@@ -194,6 +196,14 @@ class ClusterMembershipListAPIView(generics.ListAPIView):
     serializer_class = ClusterMembershipSerializer
     permission_classes = [permissions.IsAuthenticated, ClusterMembersObjectPermission]
     queryset = ClusterMembership.objects.all()
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["created_datetime"]
+    search_fields = [
+        "user__first_name",
+        "user__last_name",
+    ]
+    ordering_fields = ["created_datetime", "user__first_name", "user__last_name"]
+    ordering = ["-created_datetime"]
 
     @extend_schema(
         examples=[
@@ -300,6 +310,16 @@ class ClusterInvitationListAPIView(generics.ListCreateAPIView):
         ClusterInvitationObjectPermission,
     ]
     queryset = ClusterInvitation.objects.all()
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status", "created_by"]
+    search_fields = ["user__first_name", "user__last_name"]
+    ordering_fields = [
+        "status",
+        "created_datetime",
+        "user__first_name",
+        "user__last_name",
+    ]
+    ordering = ["-created_datetime"]
 
     @extend_schema(
         examples=[
@@ -439,6 +459,11 @@ class ClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
 class UserClusterInvitationListAPIView(generics.ListAPIView):
     serializer_class = ClusterInvitationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    filterset_fields = ["status"]
+    search_fields = ["cluster__title"]
+    ordering_fields = ["status", "created_datetime"]
+    ordering = ["-created_datetime"]
 
     @extend_schema(
         examples=[

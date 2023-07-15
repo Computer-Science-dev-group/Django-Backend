@@ -24,9 +24,9 @@ class PostListAPIView(generics.ListCreateAPIView):
 
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticated, ClusterPostPermission]
-
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
     ordering_fields = ["created_datetime"]
+    search_fields = ["content", "title"]
     ordering = ["-created_datetime"]
 
     def get_object(self) -> Cluster:
@@ -83,8 +83,12 @@ class PostLikeListAPIView(generics.ListCreateAPIView):
         permissions.IsAuthenticated,
         ClusterPostPermission,
     ]
-
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = [
+        "created_by__first_name",
+        "created_by__last_name",
+        "created_by__display_name",
+    ]
     ordering_fields = ["created_datetime"]
     ordering = ["-created_datetime"]
 
@@ -145,8 +149,8 @@ class CommentListAPIView(generics.ListCreateAPIView):
         permissions.IsAuthenticated,
         ClusterPostPermission,
     ]
-
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = ["content"]
     ordering_fields = ["created_datetime"]
     ordering = ["-created_datetime"]
 
@@ -179,8 +183,8 @@ class RepliesListAPIView(generics.ListCreateAPIView):
 
     serializer_class = CommentSerializer
     permission_classes = [permissions.IsAuthenticated, ClusterPostPermission]
-
-    filter_backends = [filters.OrderingFilter]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = ["content"]
     ordering_fields = ["created_datetime"]
     ordering = ["-created_datetime"]
 
