@@ -16,6 +16,7 @@ from rest_framework.response import Response
 from config.settings.base import CACHE_DURATION
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
+    CustomUserSerializer,
     EmailVerificationSerializer,
     FollowsSerializer,
     FriendshipInvitationSerializer,
@@ -182,7 +183,7 @@ class FollowAPIView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
 
-        return Response(status=status.HTTP_201_CREATED)
+        return Response(data=serializer.data, status=status.HTTP_201_CREATED)
 
 
 class UnFollowAPIView(generics.DestroyAPIView):
@@ -197,6 +198,60 @@ class UnFollowAPIView(generics.DestroyAPIView):
         return get_object_or_404(
             Follows, user_from=self.request.user.id, user_to=self.kwargs["user_id"]
         )
+
+
+class FollowerAndFollowingListAPIView(generics.ListAPIView):
+    serializer_class = CustomUserSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["first_name", "last_name", "display_name"]
+
+    def get_queryset(self):
+        return CustomUser.objects.filter(id=self.request.user.id)
+
+    @method_decorator(cache_page(CACHE_DURATION))
+    @extend_schema(
+        examples=[
+            OpenApiExample(
+                "Example",
+                response_only=True,
+                value={
+                    "info": "Success",
+                    "code": 200,
+                    "data": {
+                        "followers": [
+                            {
+                                "first_name": "string",
+                                "last_name": "string",
+                                "profile_picture": "path/image.png",
+                                "display_name": "string",
+                            },
+                        ],
+                        "following": [
+                            {
+                                "first_name": "string",
+                                "last_name": "string",
+                                "profile_picture": "path/image.png",
+                                "display_name": "string",
+                            },
+                        ],
+                    },
+                }
+            )
+        ]
+    )
+    def list(self, request, *args, **kwargs) -> Response:
+        queryset = self.get_queryset()
+        user = queryset.first()
+        followers = user.followers.all()
+        following = user.follows.all()
+        followers_serializer = self.serializer_class(followers, many=True)
+        following_serializer = self.serializer_class(following, many=True)
+        response_data = {
+            "followers": followers_serializer.data,
+            "following": following_serializer.data,
+        }
+        return Response(data=response_data, status=status.HTTP_200_OK)
 
 
 class ChangePasswordAPIView(generics.UpdateAPIView):

@@ -234,6 +234,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.user_1 = UserModelFactory.create(
             first_name="John",
             last_name="Doe",
+            display_name="JohnDoe",
             email="johndoe@example.com",
             is_active=True,
             is_verified=True,
@@ -241,6 +242,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         self.user_2 = UserModelFactory.create(
             first_name="Jane",
             last_name="Doe",
+            display_name="JaneDoe",
             email="janedoe@example.com",
             is_active=True,
             is_verified=True,
@@ -250,6 +252,9 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         )
         self.unfollow_url = reverse(
             "accounts_api_v1:user_unfollow", kwargs={"user_id": self.user_2.id}
+        )
+        self.follows_list_url = reverse(
+            "accounts_api_v1:user_follower_following_list"
         )
 
     def test_unauthenticated_user_cannot_follow(self):
@@ -264,6 +269,12 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
         response = self.client.delete(self.unfollow_url)
         self.assertEqual(response.status_code, 401)
 
+    def test_unauthenticated_user_cannot_view_follows_list(self):
+        """Test if an unauthenticated user cannot view follow list."""
+
+        response = self.client.get(self.follows_list_url)
+        self.assertEqual(response.status_code, 401)
+
     def test_authenticated_user_can_follow(self):
         """Test if an authenticated user can follow other users."""
 
@@ -271,6 +282,7 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
 
         response = self.client.post(self.follow_url)
         self.assertEqual(response.status_code, 201)
+        self.assertIsNotNone(response.data)
 
     def test_authenticated_user_can_unfollow(self):
         """Test if an authenticated user can unfollow other users."""
@@ -282,6 +294,33 @@ class UserFollowAndUnFollowAPIViewTests(APITestCase):
 
         unfollow_response = self.client.delete(self.unfollow_url)
         self.assertEqual(unfollow_response.status_code, 204)
+        self.assertIsNone(unfollow_response.data)
+
+    def test_authenticated_user_can_view_follows_list(self):
+        """Test if an authenticated user can view follow list."""
+
+        self.client.force_authenticate(user=self.user_1)
+        self.client.post(self.follow_url)
+
+        self.user_1.refresh_from_db()
+
+        response = self.client.get(self.follows_list_url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIsNotNone(response.data)
+        self.assertDictEqual(
+            dict(response.json()["data"]),
+            {
+                "followers": [],
+                "following": [
+                    {
+                        "first_name": self.user_2.first_name,
+                        "last_name": self.user_2.last_name,
+                        "display_name": self.user_2.display_name,
+                        "profile_picture": None,
+                    },
+                ],
+            },
+        )
 
 
 class UserProfileAPIViewTests(APITestCase):

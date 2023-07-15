@@ -198,6 +198,13 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return data
 
 
+class CustomUserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = ["first_name", "last_name", "display_name", "profile_picture"]
+        read_only_fields = ["first_name", "last_name", "display_name", "profile_picture"]
+
+
 class FollowsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Follows
