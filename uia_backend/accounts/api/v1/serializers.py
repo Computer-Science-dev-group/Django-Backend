@@ -129,6 +129,7 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
             return attrs
         except (signing.SignatureExpired, signing.BadSignature):
             raise serializers.ValidationError("Invalid link or link has expired.")
+
         except EmailVerification.DoesNotExist:
             logger.exception(
                 "uia_backend::accounts::api::v1::serializers::validate:: Email verification record not found.",
