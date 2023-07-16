@@ -34,17 +34,19 @@ def send_user_registration_email_verification_mail(
     signature = signer.sign_object(str(verification_record.id))
     url = reverse("accounts_api_v1:email_verification", args=[signature])
 
-    send_template_email_task.delay(
-        recipients=[user.email],
-        internal_tracker_ids=[str(verification_record.internal_tracker_id)],
-        template_id=constants.EMAIL_VERIFICATION_TEMPLATE_ID,
-        template_merge_data={
-            user.email: {
-                "link": request.build_absolute_uri(location=url),
-                "expiration_duration_in_hours": constants.EMAIL_VERIFICATION_ACTIVE_PERIOD,
-            },
-        },
-    )
+    print(url)
+
+    # send_template_email_task.delay(
+    #     recipients=[user.email],
+    #     internal_tracker_ids=[str(verification_record.internal_tracker_id)],
+    #     template_id=constants.EMAIL_VERIFICATION_TEMPLATE_ID,
+    #     template_merge_data={
+    #         user.email: {
+    #             "link": request.build_absolute_uri(location=url),
+    #             "expiration_duration_in_hours": constants.EMAIL_VERIFICATION_ACTIVE_PERIOD,
+    #         },
+    #     },
+    # )
 
 
 def get_location_from_ip(ip: str) -> str | None:
