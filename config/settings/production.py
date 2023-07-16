@@ -26,7 +26,8 @@ DATABASES = {
         "PASSWORD": env("POSTGRES_PASSWORD"),
         "HOST": env("POSTGRES_HOST"),
         "PORT": env("POSTGRES_PORT"),
-        "CONN_MAX_AGE": env.int("CONN_MAX_AGE", default=60),
+        "CONN_MAX_AGE": env.int("CONN_MAX_AGE", default=500),
+        "CONN_HEALTH_CHECKS": env.bool("CONN_HEALTH_CHECKS", default=True),
     },
 }
 
