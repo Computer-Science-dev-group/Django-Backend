@@ -8,7 +8,7 @@ from django.db.models.expressions import RawSQL
 from django.db.models.query import QuerySet
 from django.db.utils import Error
 from django.http import Http404
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
@@ -125,9 +125,18 @@ class EmailVerificationAPIView(generics.GenericAPIView):
     )
     def get(self, request: Request, signature: str) -> Response:
         serializer = self.get_serializer(data={"signature": signature})
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(data=serializer.data)
+        is_valid = serializer.is_valid()
+        status_code = status.HTTP_400_BAD_REQUEST
+        if is_valid:
+            status_code = status.HTTP_200_OK
+            serializer.save()
+
+        return render(
+            request,
+            "email_verification.html",
+            context={"is_valid": is_valid},
+            status=status_code,
+        )
 
 
 class UserProfileAPIView(generics.RetrieveUpdateAPIView):
