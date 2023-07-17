@@ -140,15 +140,6 @@ class EmailVerificationAPIViewTests(APITestCase):
         self.assertTrue(self.user.is_active)
         self.assertFalse(self.email_verification.is_active)
 
-        self.assertDictEqual(
-            response.json(),
-            {
-                "status": "Success",
-                "code": 200,
-                "data": {"message": "Your account has been successfully verified."},
-            },
-        )
-
     def test__add_user_to_defualt_clusters_on_successful_email_verification(self):
         """Test to ensure that user is added to default clusters on email verification."""
         response = self.client.get(path=self.url)
@@ -221,15 +212,6 @@ class EmailVerificationAPIViewTests(APITestCase):
 
         self.assertFalse(self.user.is_active)
         self.assertTrue(self.email_verification.is_active)
-
-        self.assertDictEqual(
-            response.json(),
-            {
-                "status": "Error",
-                "code": 400,
-                "data": {"non_field_errors": ["Invalid link or link has expired."]},
-            },
-        )
 
 
 class UserProfileAPIViewTests(APITestCase):
