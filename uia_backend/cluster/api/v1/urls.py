@@ -1,12 +1,15 @@
 from django.urls import path
 
 from uia_backend.cluster.api.v1.views import (
+    CancelRSVPView,
     ClusterDetailAPIView,
     ClusterInvitationDetailAPIView,
     ClusterInvitationListAPIView,
     ClusterListCreateAPIView,
     ClusterMembersDetailAPIView,
     ClusterMembershipListAPIView,
+    CreateEventView,
+    RSVPEventView,
     UserClusterInvitationDetailAPIView,
     UserClusterInvitationListAPIView,
 )
@@ -47,5 +50,20 @@ urlpatterns = [
         "invitations/<uuid:invitation_id>/",
         UserClusterInvitationDetailAPIView.as_view(),
         name="retrieve_update_user_cluster_invitation",
+    ),
+    path(
+        "<uuid:cluster_id>/event/",
+        CreateEventView.as_view(),
+        name="create_cluster_event",
+    ),
+    path(
+        "<uuid:cluster_id>/event/<event_id>/rsvp",
+        RSVPEventView.as_view(),
+        name="accept_cluster_event",
+    ),
+    path(
+        "<uuid:cluster_id>/event/<event_id>/cancel",
+        CancelRSVPView.as_view(),
+        name="cancel_cluster_event",
     ),
 ]

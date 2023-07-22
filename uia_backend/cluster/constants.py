@@ -11,3 +11,5 @@ CLUSTER_PERMISSIONS = {
     (ADD_CLUSTER_MEMBER_PERMISSION, "Add a member to a cluster"),
     (REMOVE_CLUSTER_MEMBER_PERMISSION, "Remove member from cluster"),
 }
+
+EVENT_NOTIFICATION_TEMPLATE_ID = ""

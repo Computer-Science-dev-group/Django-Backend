@@ -2,7 +2,9 @@ import uuid
 from unittest.mock import MagicMock
 
 from tests.accounts.test_models import UserModelFactory
+from tests.cluster.test_models import ClusterFactory, ClusterMembershipFactory
 from uia_backend.cluster.api.v1.serializers import (
+    ClusterEventSerializer,
     ClusterInvitationSerializer,
     ClusterSerializer,
 )
@@ -132,3 +134,82 @@ class ClusterMembershipSerializer(CustomSerializerTests):
 
     VALID_DATA = []
     INVALID_DATA = []
+
+
+class ClusterEventSerializerTests(CustomSerializerTests):
+    __test__ = True
+    serializer_class = ClusterEventSerializer
+
+    REQUIRED_FIELDS = [
+        "event_date",
+        "title",
+        "event_type",
+    ]
+    NON_REQUIRED_FIELDS = [
+        "id",
+        "location",
+        "link",
+        "description",
+        "attendees",
+        "status",
+        "cluster",
+        "created_by",
+    ]
+
+    def setUp(self) -> None:
+        authenticated_user = UserModelFactory.create(
+            is_active=True, email="email1@example.com"
+        )
+        # Make sure a user is a member of a cluster
+        self.cluster = ClusterFactory.create()
+        ClusterMembershipFactory.create(cluster=self.cluster, user=authenticated_user)
+        request = MagicMock()
+        request.user = authenticated_user
+
+        self.VALID_DATA = [
+            {
+                "data": {
+                    "title": "An Event",
+                    "event_type": 1,
+                    "status": 2,
+                    "event_date": "2023-07-17T13:45:51.587Z",
+                },
+                "lable": "Test valid data",
+                "context": {"request": request, "cluster": self.cluster},
+            },
+            {
+                "data": {
+                    "title": "A new Event",
+                    "event_type": 1,
+                    "status": 2,
+                    "location": "UI Alumni Building",
+                    "event_date": "2023-07-17T13:45:51.587Z",
+                },
+                "lable": "Test valid data",
+                "context": {"request": request, "cluster": self.cluster},
+            },
+        ]
+
+        self.INVALID_DATA = [
+            {
+                "data": {
+                    "title": "An Event",
+                    "event_type": 1,
+                    "status": 2,
+                    "event_date": "2023-07-37",
+                },
+                "lable": "Test Invalid date type",
+                "context": {"request": request, "cluster": self.cluster},
+            },
+            {
+                "data": {
+                    "title": "A new Event",
+                    "event_type": 1,
+                    "status": 5,
+                    "location": "UI Alumni Building",
+                    "event_date": "2023-07-17T13:45:51.587Z",
+                },
+                "lable": "Test invalid Data",
+                "context": {"request": request, "cluster": self.cluster},
+            },
+        ]

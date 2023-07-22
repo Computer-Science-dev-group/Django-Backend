@@ -1,5 +1,5 @@
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlencode
 
 from django.test import override_settings
@@ -10,9 +10,11 @@ from rest_framework.test import APITestCase
 from tests.accounts.test_models import UserModelFactory
 from tests.cluster.test_models import (
     ClusterChannelFactory,
+    ClusterEventFactory,
     ClusterFactory,
     ClusterInvitationFactory,
     ClusterMembershipFactory,
+    EventAttendanceFactory,
     InternalClusterFactory,
 )
 from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
@@ -22,7 +24,13 @@ from uia_backend.cluster.constants import (
     UPDATE_CLUSTER_PERMISSION,
     VIEW_CLUSTER_PERMISSION,
 )
-from uia_backend.cluster.models import Cluster, ClusterInvitation
+from uia_backend.cluster.models import (
+    Cluster,
+    ClusterEvent,
+    ClusterInvitation,
+    ClusterMembership,
+    EventAttendance,
+)
 from uia_backend.libs.permissions import (
     assign_object_permissions,
     check_object_permissions,
@@ -1358,3 +1366,248 @@ class UserClusterInvitationDetailAPIView(APITestCase):
         self.assertEqual(
             self.invitation_record.status, ClusterInvitation.INVITATION_STATUS_REJECTED
         )
+
+
+class ClusterEventListCreateAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.client.force_authenticate(user=self.user)
+        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        # Make sure the user is a member of the cluster
+        ClusterMembershipFactory.create(user=self.user, cluster=self.cluster)
+
+        self.url = reverse(
+            "cluster_api_v1:create_cluster_event",
+            args=[str(self.cluster.id)],
+        )
+
+    def test_create_cluster_event(self):
+        current_time = datetime.now(timezone.utc)
+        formatted_time = current_time.strftime("%Y-%m-%dT%H:%M:%S.%fZ")
+        data = {
+            "title": "Another One",
+            "description": "Just a new event",
+            "event_type": 0,
+            "location": "Counter Ib",
+            "status": 0,
+            "event_date": formatted_time,
+        }
+
+        response = self.client.post(path=self.url, data=data, format="json")
+        cluster_event = ClusterEvent.objects.first()
+        self.assertIsNotNone(cluster_event)
+        expected_response_data = {
+            "status": "Success",
+            "code": 201,
+            "data": {
+                "id": str(cluster_event.id),
+                "cluster": str(self.cluster.id),
+                "title": "Another One",
+                "description": "Just a new event",
+                "event_type": 0,
+                "location": "Counter Ib",
+                "link": None,
+                "status": 0,
+                "created_by": str(self.user.id),
+                "attendees": [str(self.user.id)],
+                "event_date": formatted_time,
+            },
+        }
+        self.assertEqual(response.status_code, 201)
+        self.assertDictEqual(expected_response_data, response.json())
+
+    def test_create_cluster_with_unauthenticated_user(self):
+        self.client.force_authenticate(user=None)
+        data = {
+            "title": "Another One",
+            "description": "Just a new event",
+            "event_type": 0,
+            "location": "Counter Ib",
+            "status": 0,
+            "event_date": "2023-07-17T17:06:08.822Z",
+        }
+
+        response = self.client.post(path=self.url, data=data, format="json")
+        self.assertEqual(response.status_code, 401)
+
+    def test_create_cluster_with_no_cluster_membership(self):
+        membership = ClusterMembership.objects.get(user=self.user, cluster=self.cluster)
+        membership.delete()
+        data = {
+            "title": "Another One",
+            "description": "Just a new event",
+            "event_type": 0,
+            "location": "Counter Ib",
+            "status": 0,
+            "event_date": "2023-07-17T17:06:08.822Z",
+        }
+
+        expected_response = {
+            "status": "Error",
+            "code": 400,
+            "data": {"non_field_errors": ["User is not a member of the cluster."]},
+        }
+
+        response = self.client.post(path=self.url, data=data, format="json")
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(response.json(), expected_response)
+
+    def test_list_cluster_event(self):
+        # Creating Cluster Membership for the user
+        ClusterMembershipFactory.create(user=self.user, cluster=self.cluster)
+        # Creating cluster events
+        event_1 = ClusterEventFactory(cluster=self.cluster, created_by=self.user)
+        event_2 = ClusterEventFactory(
+            cluster=self.cluster,
+            title="Untitled Event The Second",
+            created_by=self.user,
+        )
+
+        response = self.client.get(self.url, format="json")
+        expected_data = {
+            "count": 2,
+            "next": None,
+            "previous": None,
+            "status": "Success",
+            "code": 200,
+            "data": [
+                {
+                    "id": str(event_1.id),
+                    "cluster": str(self.cluster.id),
+                    "title": "Untitled Event",
+                    "description": "",
+                    "event_type": 0,
+                    "location": None,
+                    "link": None,
+                    "status": 0,
+                    "attendees": [],
+                    "created_by": str(self.user.id),
+                    "event_date": event_1.event_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                },
+                {
+                    "id": str(event_2.id),
+                    "cluster": str(self.cluster.id),
+                    "title": "Untitled Event The Second",
+                    "description": "",
+                    "event_type": 0,
+                    "location": None,
+                    "link": None,
+                    "status": 0,
+                    "attendees": [],
+                    "created_by": str(self.user.id),
+                    "event_date": event_2.event_date.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                },
+            ],
+        }
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(expected_data, response.json())
+
+
+class RSVPClusterEventAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user_1 = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.user_2 = UserModelFactory.create(
+            email="thesecond@third.com", is_active=True
+        )
+        self.client.force_authenticate(user=self.user_2)
+        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        # Make sure the users are members of the cluster
+        ClusterMembershipFactory.create(user=self.user_1, cluster=self.cluster)
+        ClusterMembershipFactory.create(user=self.user_2, cluster=self.cluster)
+
+        self.event = ClusterEventFactory(created_by=self.user_1, cluster=self.cluster)
+        # Create Event Attendance when creating an event
+        self.attendance_1 = EventAttendanceFactory.create(
+            event=self.event, attendee=self.user_1
+        )
+        self.attendance_2 = EventAttendanceFactory.create(
+            event=self.event, attendee=self.user_2
+        )
+        self.url = reverse(
+            "cluster_api_v1:accept_cluster_event",
+            args=[str(self.cluster.id), str(self.event.id)],
+        )
+
+    def test_rsvp_cluster_event(self):
+        response = self.client.patch(self.url)
+        expected_response = {
+            "status": "Success",
+            "code": 200,
+            "data": {
+                "id": str(self.attendance_2.id),
+                "status": EventAttendance.EVENT_ATTENDANCE_STATUS_ATTENDING,
+                "event": str(self.event.id),
+                "attendee": str(self.user_2.id),
+            },
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(expected_response, response.json())
+
+    def test_rsvp_cluster_event_twice(self):
+        # Accepts the first time
+        self.client.patch(self.url)
+        # Makes the second request
+        response = self.client.patch(self.url)
+        expected_response = {
+            "status": "Error",
+            "code": 400,
+            "data": ["You have already RSVP'd for this event."],
+        }
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(expected_response, response.json())
+
+
+class CancelClusterEventAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user_1 = UserModelFactory.create(email="user@example.com", is_active=True)
+        self.user_2 = UserModelFactory.create(
+            email="thesecond@third.com", is_active=True
+        )
+        self.client.force_authenticate(user=self.user_2)
+        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        # Make sure the users are members of the cluster
+        ClusterMembershipFactory.create(user=self.user_1, cluster=self.cluster)
+        ClusterMembershipFactory.create(user=self.user_2, cluster=self.cluster)
+
+        self.event = ClusterEventFactory(created_by=self.user_1, cluster=self.cluster)
+        # Create Event Attendance when creating an event
+        self.attendance_1 = EventAttendanceFactory.create(
+            event=self.event, attendee=self.user_1
+        )
+        self.attendance_2 = EventAttendanceFactory.create(
+            event=self.event, attendee=self.user_2
+        )
+        self.url = reverse(
+            "cluster_api_v1:cancel_cluster_event",
+            args=[str(self.cluster.id), str(self.event.id)],
+        )
+
+    def test_rsvp_cluster_event(self):
+        response = self.client.patch(self.url)
+        expected_response = {
+            "status": "Success",
+            "code": 200,
+            "data": {
+                "id": str(self.attendance_2.id),
+                "status": EventAttendance.EVENT_ATTENDANCE_STATUS_NOT_ATTENDING,
+                "event": str(self.event.id),
+                "attendee": str(self.user_2.id),
+            },
+        }
+
+        self.assertEqual(response.status_code, 200)
+        self.assertDictEqual(expected_response, response.json())
+
+    def test_rsvp_cluster_event_twice(self):
+        # Accepts the first time
+        self.client.patch(self.url)
+        # Makes the second request
+        response = self.client.patch(self.url)
+        expected_response = {
+            "status": "Error",
+            "code": 400,
+            "data": ["You have already canceled your RSVP for this event."],
+        }
+        self.assertEqual(response.status_code, 400)
+        self.assertDictEqual(expected_response, response.json())

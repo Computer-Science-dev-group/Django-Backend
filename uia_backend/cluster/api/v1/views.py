@@ -7,7 +7,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiExample, extend_schema
-from rest_framework import filters, generics, permissions
+from rest_framework import filters, generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
@@ -19,9 +19,11 @@ from uia_backend.cluster.api.v1.permissions import (
     InternalClusterProtectionPermission,
 )
 from uia_backend.cluster.api.v1.serializers import (
+    ClusterEventSerializer,
     ClusterInvitationSerializer,
     ClusterMembershipSerializer,
     ClusterSerializer,
+    EventAttendanceSerializer,
 )
 from uia_backend.cluster.constants import (
     ADD_CLUSTER_MEMBER_PERMISSION,
@@ -29,7 +31,13 @@ from uia_backend.cluster.constants import (
     UPDATE_CLUSTER_PERMISSION,
     VIEW_CLUSTER_PERMISSION,
 )
-from uia_backend.cluster.models import Cluster, ClusterInvitation, ClusterMembership
+from uia_backend.cluster.models import (
+    Cluster,
+    ClusterEvent,
+    ClusterInvitation,
+    ClusterMembership,
+    EventAttendance,
+)
 from uia_backend.libs.permissions import unassign_object_permissions
 
 
@@ -549,3 +557,65 @@ class UserClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
         return get_object_or_404(
             self.request.user.cluster_invitations, id=self.kwargs["invitation_id"]
         )
+
+
+class CreateEventView(generics.ListCreateAPIView):
+    serializer_class = ClusterEventSerializer
+
+    def create(self, request, *args, **kwargs):
+        # Pass the cluster as context to the serializer
+        cluster = get_object_or_404(Cluster, pk=self.kwargs["cluster_id"])
+        serializer = self.get_serializer(
+            data=request.data, context={"cluster": cluster, "request": request}
+        )
+        serializer.is_valid(raise_exception=True)
+
+        serializer.save(created_by=self.request.user, cluster=cluster)
+
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def get_queryset(self) -> QuerySet:
+        return ClusterEvent.objects.filter(cluster_id=self.kwargs["cluster_id"])
+
+
+class RSVPEventView(generics.UpdateAPIView):
+    queryset = EventAttendance.objects.all()
+    serializer_class = EventAttendanceSerializer
+    http_method_names = ["patch"]
+
+    def get_object(self):
+        event_id = self.kwargs["event_id"]
+        return self.queryset.get(event=event_id, attendee=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        # Pass the response_status from the request data
+        serializer.rsvp_event(self.request.user)
+
+        # Refresh the event object with updated attendees after the response
+        instance.refresh_from_db()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class CancelRSVPView(generics.UpdateAPIView):
+    queryset = EventAttendance.objects.all()
+    serializer_class = EventAttendanceSerializer
+    http_method_names = ["patch"]
+
+    def get_object(self):
+        event_id = self.kwargs["event_id"]
+        return self.queryset.get(event__id=event_id, attendee=self.request.user)
+
+    def update(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        serializer.cancel_event()
+
+        # Refresh the event object with updated attendees after the response
+        instance.refresh_from_db()
+
+        return Response(serializer.data, status=status.HTTP_200_OK)

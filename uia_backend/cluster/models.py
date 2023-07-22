@@ -78,3 +78,85 @@ class ClusterMembership(BaseAbstractModel):
     invitation = models.ForeignKey(
         ClusterInvitation, on_delete=models.CASCADE, null=True
     )
+
+
+class ClusterEvent(BaseAbstractModel):
+    EVENT_TYPE_PHYSICAL = 0
+    EVENT_TYPE_VIRTUAL = 1
+    EVENT_TYPE_HYBRID = 2
+
+    EVENT_STATUS_AWAITING = 0
+    EVENT_STATUS_ONGOING = 1
+    EVENT_STATUS_CANCELLED = 2
+    EVENT_STATUS_EXPIRED = 3
+
+    EVENT_TYPES = (
+        (EVENT_TYPE_PHYSICAL, "Physical"),
+        (EVENT_TYPE_VIRTUAL, "Virtual"),
+        (EVENT_TYPE_HYBRID, "Hybrid"),
+    )
+
+    STATUS_CHOICES = (
+        (EVENT_STATUS_AWAITING, "Awaiting"),
+        (EVENT_STATUS_ONGOING, "Ongoing"),
+        (EVENT_STATUS_CANCELLED, "Cancelled"),
+        (EVENT_STATUS_EXPIRED, "Expired"),
+    )
+
+    cluster = models.ForeignKey(Cluster, on_delete=models.CASCADE)
+    title = models.CharField(max_length=100)
+    description = models.TextField(blank=True, default="")
+    event_type = models.CharField(max_length=10, choices=EVENT_TYPES)
+    location = models.CharField(max_length=255, blank=True, null=True)
+    status = models.CharField(
+        max_length=10, choices=STATUS_CHOICES, default=EVENT_STATUS_AWAITING
+    )
+    link = models.URLField(blank=True, null=True)
+    attendees = models.ManyToManyField(
+        CustomUser,
+        through="EventAttendance",
+        through_fields=["event", "attendee"],
+        related_name="attended_events",
+    )
+    created_by = models.ForeignKey(CustomUser, on_delete=models.PROTECT, null=True)
+    event_date = models.DateTimeField()
+
+    def cancel(self):
+        self.status = ClusterEvent.EVENT_STATUS_CANCELLED
+        self.save()
+        # Notify attendees about event cancellation
+
+    def save(self, *args, **kwargs):
+        # Checks if the User object has not been created
+        if ClusterEvent.objects.filter(pk=self.pk).exists() is False:
+            cluster_membership = ClusterMembership.objects.filter(
+                user=self.created_by, cluster=self.cluster
+            ).first()
+            if not cluster_membership:
+                raise Exception("User is not a member of the cluster.")
+        super().save(*args, **kwargs)
+
+
+class EventAttendance(BaseAbstractModel):
+    EVENT_ATTENDANCE_STATUS_INVITED = 0
+    EVENT_ATTENDANCE_STATUS_ATTENDING = 1
+    EVENT_ATTENDANCE_STATUS_NOT_ATTENDING = 2
+    EVENT_ATTENDANCE_STATUS_CHOICES = (
+        (EVENT_ATTENDANCE_STATUS_INVITED, "Invited"),
+        (EVENT_ATTENDANCE_STATUS_ATTENDING, "Attending"),
+        (EVENT_ATTENDANCE_STATUS_NOT_ATTENDING, "Not Attending"),
+    )
+
+    event = models.ForeignKey(ClusterEvent, on_delete=models.CASCADE)
+    attendee = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    status = models.PositiveSmallIntegerField(
+        choices=EVENT_ATTENDANCE_STATUS_CHOICES, default=EVENT_ATTENDANCE_STATUS_INVITED
+    )
+
+    def mark_attending(self):
+        self.status = EventAttendance.EVENT_ATTENDANCE_STATUS_ATTENDING
+        self.save()
+
+    def mark_not_attending(self):
+        self.status = EventAttendance.EVENT_ATTENDANCE_STATUS_NOT_ATTENDING
+        self.save()

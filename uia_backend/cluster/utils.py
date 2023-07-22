@@ -1,11 +1,19 @@
 from django.conf import settings
 from django.db import transaction
 from instant.models import Channel
+from django.urls import reverse
 
 from uia_backend.accounts.models import CustomUser
+from uia_backend.cluster import constants
 from uia_backend.cluster.constants import VIEW_CLUSTER_PERMISSION
-from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
+from uia_backend.cluster.models import (
+    Cluster,
+    ClusterEvent,
+    ClusterMembership,
+    InternalCluster,
+)
 from uia_backend.libs.permissions import assign_object_permissions
+from uia_backend.notification.tasks import send_template_email_task
 
 
 class ClusterManager:
@@ -133,3 +141,32 @@ class ClusterManager:
             assign_object_permissions(
                 permissions=permissions, assignee=self.user, obj=record.cluster
             )
+
+
+def send_event_creation_notification_mail(
+    instance: ClusterEvent,
+) -> None:
+    """Send an event creation notification to all attendees except the creator."""
+    creator = instance.created_by
+    attendees = instance.eventattendance_set.exclude(attendee=creator)
+    for attendance in attendees:
+        user = attendance.attendee
+        send_template_email_task.delay(
+            recipients=[user.email],
+            internal_tracker_ids=[str(user.id)],
+            template_id=constants.PASSWORD_RESET_TEMPLATE_ID,
+            template_merge_data={
+                user.email: {
+                    "creator": instance.creator,
+                    "event_location": instance.location,
+                    "event_name": instance.title,
+                    "event_link": instance.link,
+                    # NOTE: The arguments in the accept link should be changed
+                    # later to query parameters for the frontend to consume
+                    "accept_link": reverse(
+                        "cluster_api_v1:accept_cluster_event",
+                        args=[str(instance.cluster.id), str(instance.id)],
+                    ),
+                },
+            },
+        )

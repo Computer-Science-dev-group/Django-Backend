@@ -6,8 +6,10 @@ from instant.models import Channel
 
 from uia_backend.cluster.models import (
     Cluster,
+    ClusterEvent,
     ClusterInvitation,
     ClusterMembership,
+    EventAttendance,
     InternalCluster,
 )
 
@@ -44,3 +46,19 @@ class ClusterChannelFactory(DjangoModelFactory):
 
     class Meta:
         model = Channel
+
+
+class ClusterEventFactory(DjangoModelFactory):
+    title = "Untitled Event"
+    description = ""
+    status = ClusterEvent.EVENT_STATUS_AWAITING
+    event_type = ClusterEvent.EVENT_TYPE_PHYSICAL
+    event_date = factory.Faker("future_datetime", end_date="+30d")
+
+    class Meta:
+        model = ClusterEvent
+
+
+class EventAttendanceFactory(DjangoModelFactory):
+    class Meta:
+        model = EventAttendance

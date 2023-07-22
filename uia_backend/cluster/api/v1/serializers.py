@@ -15,7 +15,14 @@ from uia_backend.cluster.constants import (
     UPDATE_CLUSTER_PERMISSION,
     VIEW_CLUSTER_PERMISSION,
 )
-from uia_backend.cluster.models import Cluster, ClusterInvitation, ClusterMembership
+from uia_backend.cluster.models import (
+    Cluster,
+    ClusterEvent,
+    ClusterInvitation,
+    ClusterMembership,
+    EventAttendance,
+)
+from uia_backend.cluster.utils import send_event_creation_notification_mail
 from uia_backend.libs.permissions import assign_object_permissions
 
 logger = logging.getLogger()
@@ -146,3 +153,88 @@ class ClusterMembershipSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict[str, Any]) -> ClusterInvitation:
         """Overide method."""
+
+
+class EventAttendanceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = EventAttendance
+        fields = ["id", "event", "attendee", "status"]
+        read_only_fields = ("event", "attendee", "status")
+
+    def rsvp_event(self, user):
+        event_attendance = self.instance
+
+        if event_attendance.status == EventAttendance.EVENT_ATTENDANCE_STATUS_ATTENDING:
+            raise serializers.ValidationError("You have already RSVP'd for this event.")
+
+        event_attendance.mark_attending()
+
+        return event_attendance
+
+    def cancel_event(self):
+        event_attendance = self.instance
+
+        if (
+            event_attendance.status
+            == EventAttendance.EVENT_ATTENDANCE_STATUS_NOT_ATTENDING
+        ):
+            raise serializers.ValidationError(
+                "You have already canceled your RSVP for this event."
+            )
+
+        event_attendance.mark_not_attending()
+
+        return event_attendance
+
+
+class ClusterEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClusterEvent
+        fields = [
+            "id",
+            "cluster",
+            "title",
+            "description",
+            "event_type",
+            "location",
+            "link",
+            "status",
+            "attendees",
+            "created_by",
+            "event_date",
+        ]
+        read_only_fields = ("created_by", "cluster", "attendees")
+
+    def validate(self, data):
+        # Check if the user is a member of the event's cluster
+        user = self.context["request"].user
+        cluster = self.context.get("cluster")
+        cluster_membership = ClusterMembership.objects.filter(
+            user=user, cluster=cluster
+        ).first()
+        if not cluster_membership:
+            raise serializers.ValidationError("User is not a member of the cluster.")
+
+        return data
+
+    def create(self, validated_data):
+        # Automatically invite all members of the cluster
+        cluster = validated_data["cluster"]
+        attendees = cluster.members.all()
+        event = ClusterEvent.objects.create(**validated_data)
+
+        # Bulk create EventAttendance instances for all attendees in the cluster
+
+        event_attendances = [
+            EventAttendance(event=event, attendee=attendee) for attendee in attendees
+        ]
+        EventAttendance.objects.bulk_create(event_attendances)
+
+        # Set the creator's EventAttendance status to 'attending'
+        creator = self.context["request"].user
+        creator_attendance = EventAttendance.objects.get(event=event, attendee=creator)
+        creator_attendance.status = EventAttendance.EVENT_ATTENDANCE_STATUS_ATTENDING
+        creator_attendance.save()
+        # NOTE: I will include notification to the user about the RSVP here.
+        send_event_creation_notification_mail(event)
+        return event
