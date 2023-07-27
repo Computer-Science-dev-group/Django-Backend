@@ -451,6 +451,9 @@ class LoginAPIViewTests(APITestCase):
                 "data": {
                     "auth_token": "access_token",
                     "refresh_token": "refresh_token",
+                    "profile": dict(
+                        UserProfileSerializer().to_representation(instance=self.user)
+                    ),
                 },
             },
         )
