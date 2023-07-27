@@ -185,12 +185,9 @@ class UserProfileSerializer(serializers.ModelSerializer):
         """Validate display_name."""
 
         user = self.context["request"].user
-
         # check that display_name is not in use by another user
         if (
-            CustomUser.objects.filter(
-                display_name__iexact=value,
-            )
+            CustomUser.objects.filter(display_name__iexact=value)
             .exclude(id=user.id)
             .exists()
         ):
@@ -240,12 +237,13 @@ class ChangePasswordSerializer(serializers.ModelSerializer):
         return {"message": "Password Changed Successfully."}
 
 
-class LoginSerializer(serializers.Serializer):
+class LoginSerializer(serializers.Serializer[CustomUser]):
     email = serializers.EmailField(max_length=250, required=True, write_only=True)
     password = serializers.CharField(max_length=250, required=True, write_only=True)
 
     refresh_token = serializers.CharField(read_only=True)
     auth_token = serializers.CharField(read_only=True)
+    profile = UserProfileSerializer(read_only=True)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
         """Validate serializer data."""
@@ -262,6 +260,15 @@ class LoginSerializer(serializers.Serializer):
         refresh_token = RefreshToken.for_user(user=user)
         data["refresh_token"] = str(refresh_token)
         data["auth_token"] = str(refresh_token.access_token)
+        self.instance = user
+        return data
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = {
+            "refresh_token": self.validated_data["refresh_token"],
+            "auth_token": self.validated_data["auth_token"],
+            "profile": UserProfileSerializer().to_representation(instance=instance),
+        }
         return data
 
 
