@@ -76,6 +76,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
 
         return value
 
+    def validate_date_of_birth(self, value: str) -> str:
+        msg = "Invalid date of birth."
+
+        current_year = datetime.today().strftime("%Y")
+
+        input_year = datetime.strftime(value, "%Y")
+
+        age = int(current_year) - int(input_year)
+
+        if age < 18 or age > 150:
+            raise serializers.ValidationError(msg)
+
+        return value
+
     def update(self, instance: CustomUser, validated_data: dict[str, Any]) -> None:
         """Overidden method."""
 
@@ -128,11 +142,15 @@ class EmailVerificationSerializer(serializers.ModelSerializer):
                 id=verification_id, is_active=True
             )
             return attrs
-        except (
-            signing.SignatureExpired,
-            signing.BadSignature,
-            EmailVerification.DoesNotExist,
-        ):
+        except (signing.SignatureExpired, signing.BadSignature):
+            raise serializers.ValidationError("Invalid link or link has expired.")
+
+        except EmailVerification.DoesNotExist:
+            logger.exception(
+                "uia_backend::accounts::api::v1::serializers::validate:: Email verification record not found.",
+                stack_info=True,
+                extra={"details": verification_id},
+            )
             raise serializers.ValidationError("Invalid link or link has expired.")
 
     def to_representation(self, instance: Any) -> Any:
