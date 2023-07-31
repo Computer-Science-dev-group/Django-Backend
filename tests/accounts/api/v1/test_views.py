@@ -15,6 +15,7 @@ from rest_framework_simplejwt.tokens import AccessToken
 
 from tests.accounts.test_models import (
     EmailVerificationFactory,
+    FollowsFactory,
     FriendShipFactory,
     FriendShipInvitationFactory,
     PasswordResetAttemptFactory,
@@ -28,6 +29,7 @@ from uia_backend.accounts.constants import (
 )
 from uia_backend.accounts.models import (
     CustomUser,
+    Follows,
     FriendShip,
     FriendShipInvitation,
     PasswordResetAttempt,
@@ -289,6 +291,8 @@ class UserProfileAPIViewTests(APITestCase):
                     "display_name": f"@{self.user.display_name.lower()}",
                     "phone_number": self.user.phone_number,
                     "date_of_birth": self.user.date_of_birth.isoformat(),
+                    "follower_count": 0,
+                    "following_count": 0,
                 },
             },
         )
@@ -331,6 +335,8 @@ class UserProfileAPIViewTests(APITestCase):
                     "cover_photo": f"http://testserver/media/users/{self.user.id}/cover/image.png",
                     "profile_picture": f"http://testserver/media/users/{self.user.id}/profile/image.png",
                     "year_of_graduation": self.user.year_of_graduation,
+                    "follower_count": 0,
+                    "following_count": 0,
                 },
             },
         )
@@ -1350,10 +1356,9 @@ class FriendShipInvitationDetailAPIViewTests(APITestCase):
 
 class UserProfileListAPIViewTests(APITestCase):
     def setUp(self):
-        self.user = UserModelFactory.create(is_active=True, is_verified=True)
+        self.user = UserModelFactory.create(is_active=True)
         self.user_2 = UserModelFactory.create(
             is_active=True,
-            is_verified=True,
             email="noob@noob.com",
             first_name="Joan",
             last_name="Pike",
@@ -1432,3 +1437,402 @@ class UserProfileListAPIViewTests(APITestCase):
         response = self.client.get(url_with_params)
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
+
+
+class UserFollowerListAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create(is_active=True)
+
+        self.follower_user_1 = UserModelFactory.create(
+            email="follower1@example,com",
+            is_active=True,
+            first_name="Ragna",
+            last_name="Rok",
+        )
+        self.follower_user_1_to_auth_record = FollowsFactory.create(
+            user_to=self.authenticated_user, user_from=self.follower_user_1
+        )
+
+        self.follower_user_2 = UserModelFactory.create(
+            email="follower2@example,com",
+            is_active=True,
+            first_name="Forde",
+            last_name="Magna",
+        )
+        self.follower_user_2_to_auth_record = FollowsFactory.create(
+            user_to=self.authenticated_user, user_from=self.follower_user_2
+        )
+
+        self.url = reverse("accounts_api_v1:user_follower_list")
+
+    def test_list_fails_when_unauthenticated(self):
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_list_authenticated_user_followers(self):
+        self.client.force_authenticate(user=self.authenticated_user)
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 2,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            self.follower_user_2_to_auth_record.created_datetime
+                        ),
+                        "user": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=self.follower_user_2
+                            )
+                        ),
+                    },
+                    {
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            self.follower_user_1_to_auth_record.created_datetime
+                        ),
+                        "user": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=self.follower_user_1
+                            )
+                        ),
+                    },
+                ],
+            },
+        )
+
+    def test_list_other_user_followers(self):
+        self.client.force_authenticate(user=self.authenticated_user)
+        # lets make authernticated_user follow follower_user_1
+        auth_to_follower_user_1_record = FollowsFactory.create(
+            user_from=self.authenticated_user, user_to=self.follower_user_1
+        )
+
+        url = f"{self.url}?{urlencode({'user_id': self.follower_user_1.id})}"
+        response = self.client.get(path=url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            auth_to_follower_user_1_record.created_datetime
+                        ),
+                        "user": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=self.authenticated_user
+                            )
+                        ),
+                    }
+                ],
+            },
+        )
+
+        # list follower_2 followers (should be empty)
+        url = f"{self.url}?{urlencode({'user_id': self.follower_user_2.id})}"
+        response = self.client.get(path=url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [],
+            },
+        )
+
+
+class UserFollowingListAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create(is_active=True)
+
+        self.following_user_1 = UserModelFactory.create(
+            email="follower1@example,com",
+            is_active=True,
+            first_name="Ragna",
+            last_name="Rok",
+        )
+
+        self.follow_record_1 = FollowsFactory.create(
+            user_from=self.authenticated_user,
+            user_to=self.following_user_1,
+        )
+
+        self.user_2 = UserModelFactory.create(
+            email="follower2@example,com",
+            is_active=True,
+            first_name="Forde",
+            last_name="Magna",
+        )
+
+        self.url = reverse("accounts_api_v1:user_following_list")
+
+    def test_get_fails_when_unauthenticated(self):
+        response = self.client.get(path=self.url)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_get_authenticated_user_following_list(self):
+        self.client.force_authenticate(self.authenticated_user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            self.follow_record_1.created_datetime
+                        ),
+                        "user": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=self.following_user_1
+                            )
+                        ),
+                    },
+                ],
+            },
+        )
+
+    def test_get_other_user_following_list(self):
+        self.client.force_authenticate(user=self.authenticated_user)
+
+        # lets make user_2 follow user_1
+        follow_record_2 = FollowsFactory.create(
+            user_to=self.following_user_1,
+            user_from=self.user_2,
+        )
+
+        url = f"{self.url}?{urlencode({'user_id': self.user_2.id})}"
+
+        response = self.client.get(path=url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 1,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [
+                    {
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            follow_record_2.created_datetime,
+                        ),
+                        "user": dict(
+                            UserProfileSerializer().to_representation(
+                                instance=self.following_user_1
+                            )
+                        ),
+                    },
+                ],
+            },
+        )
+
+        # lets get user_1's following list (should be empty)
+
+        url = f"{self.url}?{urlencode({'user_id': self.following_user_1.id})}"
+        response = self.client.get(path=url)
+
+        self.assertEqual(response.status_code, 200)
+
+        self.assertEqual(
+            response.json(),
+            {
+                "count": 0,
+                "next": None,
+                "previous": None,
+                "status": "Success",
+                "code": 200,
+                "data": [],
+            },
+        )
+
+    def test_post_fails_when_unauthenticated(self):
+        response = self.client.post(path=self.url, data={"user_id": self.user_2.id})
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_post_successfully(self):
+        self.client.force_authenticate(self.authenticated_user)
+        response = self.client.post(self.url, data={"user_id": self.user_2.id})
+
+        follow_records = Follows.objects.filter(
+            user_from=self.authenticated_user, user_to=self.user_2
+        )
+        self.assertEqual(follow_records.count(), 1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        follow_records.first().created_datetime,
+                    ),
+                    "user": dict(
+                        UserProfileSerializer().to_representation(instance=self.user_2)
+                    ),
+                },
+            },
+        )
+
+        # show that post is not affect by user_id query_param
+        # but first lets delete the follow record
+        follow_records.delete()
+        url = f"{self.url}?{urlencode({'user_id': self.user_2.id})}"
+        response = self.client.post(url, data={"user_id": self.user_2.id})
+
+        follow_records = Follows.objects.filter(
+            user_from=self.authenticated_user, user_to=self.user_2
+        )
+        self.assertEqual(follow_records.count(), 1)
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        follow_records.first().created_datetime,
+                    ),
+                    "user": dict(
+                        UserProfileSerializer().to_representation(instance=self.user_2)
+                    ),
+                },
+            },
+        )
+
+    def test_post_fails_if_user_is_already_being_followed(self):
+        self.client.force_authenticate(self.authenticated_user)
+        response = self.client.post(
+            self.url, data={"user_id": self.following_user_1.id}
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {"user_id": ["User already being followed."]},
+            },
+        )
+
+
+class UserFollowingDetailAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create(is_active=True)
+
+        self.following_user_1 = UserModelFactory.create(
+            email="follower1@example,com",
+            is_active=True,
+            first_name="Ragna",
+            last_name="Rok",
+        )
+
+        FollowsFactory.create(
+            user_from=self.authenticated_user,
+            user_to=self.following_user_1,
+        )
+
+        self.user_2 = UserModelFactory.create(
+            email="follower2@example,com",
+            is_active=True,
+            first_name="Forde",
+            last_name="Magna",
+        )
+
+    def test_delete_fails_when_unauthenticated(self):
+        url = reverse(
+            "accounts_api_v1:user_following_detail", args=[self.following_user_1.id]
+        )
+
+        response = self.client.delete(path=url)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_delete_fails_if_user_is_not_being_followed(self):
+        self.client.force_authenticate(self.authenticated_user)
+
+        url = reverse("accounts_api_v1:user_following_detail", args=[self.user_2.id])
+        response = self.client.delete(path=url)
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {"status": "Error", "code": 404, "data": {"detail": "Not found."}},
+        )
+
+    def test_delete_successful(self):
+        self.client.force_authenticate(self.authenticated_user)
+
+        url = reverse(
+            "accounts_api_v1:user_following_detail", args=[self.following_user_1.id]
+        )
+        response = self.client.delete(path=url)
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.data, None)
+
+        self.assertFalse(
+            Follows.objects.filter(
+                user_from=self.authenticated_user, user_to=self.following_user_1
+            ).exists()
+        )

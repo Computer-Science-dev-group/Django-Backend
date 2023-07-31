@@ -15,6 +15,7 @@ from uia_backend.accounts import constants
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    Follows,
     FriendShip,
     FriendShipInvitation,
     PasswordResetAttempt,
@@ -153,6 +154,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
         validators=[display_name_validator],
         trim_whitespace=True,
     )
+    follower_count = serializers.IntegerField(read_only=True)
+    following_count = serializers.IntegerField(read_only=True)
 
     class Meta:
         model = CustomUser
@@ -170,6 +173,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "bio",
             "gender",
             "date_of_birth",
+            "follower_count",
+            "following_count",
         ]
 
         read_only_fields = [
@@ -177,6 +182,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "year_of_graduation",
             "department",
             "faculty",
+            "follower_count",
+            "following_count",
         ]
 
     def create(self, validated_data: Any) -> Any:
@@ -198,6 +205,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance: CustomUser) -> dict[str, Any]:
         data = super().to_representation(instance)
+        data["follower_count"] = Follows.objects.filter(user_to=instance).count()
+        data["following_count"] = Follows.objects.filter(user_from=instance).count()
         data["display_name"] = (
             f"@{instance.display_name.lower()}" if instance.display_name else None
         )
@@ -588,3 +597,45 @@ class UserFriendShipSettingsSerializer(serializers.ModelSerializer):
         model = UserFriendShipSettings
         fields = ["id", "is_blocked", "users", "created_datetime", "updated_datetime"]
         read_only_fields = ["id", "users", "created_datetime", "updated_datetime"]
+
+
+class FollowingSerializer(serializers.ModelSerializer):
+    user_id = serializers.PrimaryKeyRelatedField(
+        source="user_to",
+        write_only=True,
+        queryset=CustomUser.objects.filter(is_active=True),
+    )
+    user = UserProfileSerializer(source="user_to", read_only=True)
+
+    class Meta:
+        model = Follows
+        fields = [
+            "created_datetime",
+            "user",
+            "user_id",
+        ]
+        read_only_fields = ["created_datetime", "user"]
+
+    def validate_user_id(self, value: CustomUser) -> CustomUser:
+        authenticated_user = self.context["request"].user
+
+        if Follows.objects.filter(
+            user_from=authenticated_user,
+            user_to=value,
+        ).exists():
+            raise serializers.ValidationError("User already being followed.")
+
+        return value
+
+
+class FollowerSerializer(serializers.ModelSerializer):
+    user = UserProfileSerializer(source="user_from", read_only=True)
+
+    class Meta:
+        model = Follows
+        fields = [
+            "created_datetime",
+            "user",
+        ]
+
+        read_only_fields = ["created_datetime", "user"]

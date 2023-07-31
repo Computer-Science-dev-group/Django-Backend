@@ -14,6 +14,8 @@ from tests.accounts.test_models import (
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
+    FollowerSerializer,
+    FollowingSerializer,
     FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
@@ -177,6 +179,8 @@ class UserProfileSerializerTests(CustomSerializerTests):
         "year_of_graduation",
         "department",
         "faculty",
+        "follower_count",
+        "following_count",
     ]
 
     def setUp(self) -> None:
@@ -682,4 +686,42 @@ class UserFriendShipSettingsSerializerTests(CustomSerializerTests):
         },
     ]
 
+    INVALID_DATA = []
+
+
+class FollowingSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = FollowingSerializer
+
+    REQUIRED_FIELDS = ["user_id"]
+    NON_REQUIRED_FIELDS = ["user", "created_datetime"]
+
+    def setUp(self) -> None:
+        user = UserModelFactory.create(email="user@example.com")
+        request = MagicMock()
+        request.user = user
+
+        self.VALID_DATA = [
+            {
+                "data": {"user_id": user.id},
+                "lable": "Test valid data.",
+                "context": {"request": request},
+            }
+        ]
+
+        self.INVALID_DATA = [
+            {"data": {"user_id": uuid.uuid4()}, "lable": "Test invalid user_id data."}
+        ]
+
+
+class FollowerSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = FollowerSerializer
+
+    REQUIRED_FIELDS = []
+    NON_REQUIRED_FIELDS = ["user", "created_datetime"]
+
+    VALID_DATA = []
     INVALID_DATA = []

@@ -60,6 +60,9 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     is_verified = models.BooleanField(default=False)
     last_login = models.DateTimeField(null=True)
     app_version = models.CharField(max_length=100, blank=True, null=True)
+    follows = models.ManyToManyField(
+        "self", symmetrical=False, related_name="followers", through="Follows"
+    )
 
     objects = CustomUserManager()
 
@@ -72,8 +75,22 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
         "year_of_graduation",
     ]
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.email
+
+
+class Follows(BaseAbstractModel):
+    """Model that represents a follow relationship between two users."""
+
+    user_from = models.ForeignKey(
+        CustomUser, related_name="rel_from_set", on_delete=models.CASCADE
+    )
+    user_to = models.ForeignKey(
+        CustomUser, related_name="rel_to_set", on_delete=models.CASCADE
+    )
+
+    def __str__(self) -> str:
+        return f"{self.user_from.email} follows {self.user_to.email}"
 
 
 class EmailVerification(BaseAbstractModel):

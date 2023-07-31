@@ -22,6 +22,8 @@ from uia_backend.accounts.api.v1.queries import USER_FEED_QUERY
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
     EmailVerificationSerializer,
+    FollowerSerializer,
+    FollowingSerializer,
     FriendshipInvitationSerializer,
     LoginSerializer,
     ResetPasswordSerializer,
@@ -34,6 +36,7 @@ from uia_backend.accounts.api.v1.serializers import (
 from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
 from uia_backend.accounts.models import (
     CustomUser,
+    Follows,
     FriendShipInvitation,
     UserFriendShipSettings,
 )
@@ -449,3 +452,67 @@ class UserFeedAPIView(generics.ListAPIView):
             )
 
         return query
+
+
+class UserFollowerListAPIView(generics.ListAPIView):
+    """List a users followers."""
+
+    serializer_class = FollowerSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = [
+        "user_from__first_name",
+        "user_from__last_name",
+        "user_from__display_name",
+    ]
+    ordering_fields = ["created_datetime", "-created_datetime"]
+    ordering = ["-created_datetime"]
+
+    def get_queryset(self) -> QuerySet[Follows]:
+        user_id = self.request.query_params.get("user_id")
+
+        if user_id:
+            query = Follows.objects.filter(user_to_id=user_id)
+        else:
+            query = Follows.objects.filter(user_to=self.request.user)
+
+        return query
+
+
+class UserFollowingListAPIView(generics.ListCreateAPIView):
+    """List/create users authenticated user is following."""
+
+    serializer_class = FollowingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    search_fields = [
+        "user_to__first_name",
+        "user_to__last_name",
+        "user_to__display_name",
+    ]
+    ordering_fields = ["created_datetime", "-created_datetime"]
+    ordering = ["-created_datetime"]
+
+    def get_queryset(self) -> QuerySet[Follows]:
+        user_id = self.request.query_params.get("user_id")
+
+        if user_id:
+            query = Follows.objects.filter(user_from_id=user_id)
+        else:
+            query = Follows.objects.filter(user_from=self.request.user)
+        return query
+
+    def perform_create(self, serializer: FollowingSerializer) -> None:
+        serializer.save(user_from=self.request.user)
+
+
+class UserFollowingDetailAPIView(generics.DestroyAPIView):
+    """Unfollow a user."""
+
+    serializer_class = FollowingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_object(self) -> Follows:
+        return get_object_or_404(
+            Follows, user_from=self.request.user, user_to_id=self.kwargs["user_id"]
+        )
