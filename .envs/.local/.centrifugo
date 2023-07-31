@@ -1,3 +1,4 @@
+CENTRIFUGO_HOST=http://centrifugo
 CENTRIFUGO_ALLOWED_ORIGINS="*"
 CENTRIFUGO_API_KEY="d7627bb6-2292-4911-82e1-615c0ed3eebb"
 CENTRIFUGO_ADMIN_SECRET="4e9eafcf-0120-4ddd-b668-soiasokajoskj"
@@ -8,4 +9,7 @@ CENTRIFUGO_LOG_LEVEL="debug"
 CENTRIFUGO_PORT="8888"
 CENTRIFUGO_ALLOW_SUBSCRIBE_FOR_CLIENT="true"
 CENTRIFUGO_DEBUG="true"
+CENTRIFUGO_ENGINE="redis"
+CENTRIFUGO_REDIS_ADDRESS=redis://redis:6379/0
 CENTRIFUGO_HEALTH="true"
+CENTRIFUGO_NAMESPACES='[{"name": "publicchannel", "allow_subscribe_for_client": true}, {"name": "privatechannel"}, {"name": "dm", "allow_presence_for_client": true}]'

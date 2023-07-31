@@ -1,5 +1,6 @@
 from django.conf import settings
 from django.db import transaction
+from instant.models import Channel
 
 from uia_backend.accounts.models import CustomUser
 from uia_backend.cluster.constants import VIEW_CLUSTER_PERMISSION
@@ -33,8 +34,14 @@ class ClusterManager:
         )
 
         if created or (getattr(internal_cluster, "cluster", None) is None):
+            channel = Channel.objects.create(
+                name=f'{settings.PUBLIC_CLUSTER_NAMESPACE}:{name.lower().replace(" ", "")}',
+                level=Channel.Level.Public,
+            )
             Cluster.objects.create(
-                internal_cluster=internal_cluster, title=name.capitalize()
+                internal_cluster=internal_cluster,
+                title=name.capitalize(),
+                channel=channel,
             )
 
         return internal_cluster
