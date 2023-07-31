@@ -74,6 +74,7 @@ THIRD_PARTY_APPS = [
     "rest_framework_simplejwt",
     "guardian",
     "notifications",
+    "instant",
 ]
 
 LOCAL_APPS = [
@@ -351,5 +352,16 @@ DEFUALT_CLUSTER_NAMES = {
     4: "{year_of_graduation} set",
 }
 
+PUBLIC_CLUSTER_NAMESPACE = "publicchannel"
+PRIVATE_CLUSTER_NAMESPACE = "privatechannel"
+DM_NAMESPACE = "dm"
+
 CACHE_DURATION = 3600  # in seconds
 MAX_MEDIA_UPLOAD_SIZE = 10485760  # In bytes
+
+
+# centrifugo
+CENTRIFUGO_HMAC_KEY = env("CENTRIFUGO_TOKEN_HMAC_SECRET_KEY", default="")
+CENTRIFUGO_HOST = (env("CENTRIFUGO_HOST", default=""),)
+CENTRIFUGO_PORT = env("CENTRIFUGO_PORT", default="")
+CENTRIFUGO_API_KEY = env("CENTRIFUGO_API_KEY", default="")

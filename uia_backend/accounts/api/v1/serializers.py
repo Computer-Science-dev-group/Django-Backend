@@ -7,6 +7,7 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils import timezone
+from instant.token import connection_token
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -262,6 +263,7 @@ class LoginSerializer(serializers.Serializer[CustomUser]):
 
     refresh_token = serializers.CharField(read_only=True)
     auth_token = serializers.CharField(read_only=True)
+    ws_token = serializers.CharField(read_only=True, help_text="Websocket token")
     profile = UserProfileSerializer(read_only=True)
 
     def validate(self, attrs: dict[str, Any]) -> dict[str, Any]:
@@ -286,6 +288,7 @@ class LoginSerializer(serializers.Serializer[CustomUser]):
         data = {
             "refresh_token": self.validated_data["refresh_token"],
             "auth_token": self.validated_data["auth_token"],
+            "ws_token": connection_token(user=instance),
             "profile": UserProfileSerializer().to_representation(instance=instance),
         }
         return data

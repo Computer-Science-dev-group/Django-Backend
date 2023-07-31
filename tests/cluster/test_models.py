@@ -1,4 +1,8 @@
+import uuid
+
+import factory
 from factory.django import DjangoModelFactory
+from instant.models import Channel
 
 from uia_backend.cluster.models import (
     Cluster,
@@ -33,3 +37,10 @@ class ClusterInvitationFactory(DjangoModelFactory):
 class ClusterMembershipFactory(DjangoModelFactory):
     class Meta:
         model = ClusterMembership
+
+
+class ClusterChannelFactory(DjangoModelFactory):
+    name = factory.LazyAttribute(lambda obj: str(uuid.uuid4()))
+
+    class Meta:
+        model = Channel

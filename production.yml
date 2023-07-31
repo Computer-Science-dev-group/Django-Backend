@@ -18,6 +18,7 @@ services:
     env_file:
       - ./.envs/.production/.django
       - ./.envs/.production/.postgres
+      - ./.envs/.production/.centrifugo
     command: /start
 
   postgres:
@@ -31,23 +32,23 @@ services:
     env_file:
       - ./.envs/.production/.postgres
 
-  metabase:
-    image: metabase/metabase:latest
-    container_name: uia_backend_production_metabase
-    hostname: metabase
-    volumes:
-    - /dev/urandom:/dev/random:ro
-    ports:
-      - 3000:3000
-    depends_on:
-      - postgres
-    env_file:
-      - ./.envs/.production/.postgres
-    healthcheck:
-      test: curl --fail -I http://localhost:3000/api/health || exit 1
-      interval: 15s
-      timeout: 5s
-      retries: 5
+  # metabase:
+  #   image: metabase/metabase:latest
+  #   container_name: uia_backend_production_metabase
+  #   hostname: metabase
+  #   volumes:
+  #   - /dev/urandom:/dev/random:ro
+  #   ports:
+  #     - 3000:3000
+  #   depends_on:
+  #     - postgres
+  #   env_file:
+  #     - ./.envs/.production/.postgres
+  #   healthcheck:
+  #     test: curl --fail -I http://localhost:3000/api/health || exit 1
+  #     interval: 15s
+  #     timeout: 5s
+  #     retries: 5
 
   traefik:
     build:
@@ -64,6 +65,7 @@ services:
       - "0.0.0.0:5555:5555"
       - "0.0.0.0:8000:8000"
       - "0.0.0.0:9000:9000"
+      - "0.0.0.0:8888:8888"
 
   redis:
     image: redis:6
@@ -78,16 +80,31 @@ services:
     image: uia_backend_production_celerybeat
     command: /start-celerybeat
 
-  flower:
-    <<: *django
-    image: uia_backend_production_flower
-    command: /start-flower
-
-  awscli:
-    build:
-      context: .
-      dockerfile: ./compose/production/aws/Dockerfile
+  centrifugo:
+    image: centrifugo/centrifugo:v5
+    container_name: uia_backend_production_centrifugo
+    depends_on:
+      - redis
+    command: centrifugo
+    ports:
+      - 8888
     env_file:
-      - ./.envs/.production/.django
-    volumes:
-      - production_postgres_data_backups:/backups:z
+      - ./.envs/.production/.centrifugo
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
+
+  # flower:
+  #   <<: *django
+  #   image: uia_backend_production_flower
+  #   command: /start-flower
+
+  # awscli:
+  #   build:
+  #     context: .
+  #     dockerfile: ./compose/production/aws/Dockerfile
+  #   env_file:
+  #     - ./.envs/.production/.django
+  #   volumes:
+  #     - production_postgres_data_backups:/backups:z

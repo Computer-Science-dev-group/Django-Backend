@@ -9,6 +9,7 @@ from rest_framework.test import APITestCase
 
 from tests.accounts.test_models import UserModelFactory
 from tests.cluster.test_models import (
+    ClusterChannelFactory,
     ClusterFactory,
     ClusterInvitationFactory,
     ClusterMembershipFactory,
@@ -38,17 +39,21 @@ class ClusterListCreateAPIViewTests(APITestCase):
 
     def test_list_user_clusters_case_1(self):
         """Test list users cluster when user has cluster."""
-        user_cluster = ClusterFactory.create(title="A cluster I joined")
+        user_cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=ClusterChannelFactory.create()
+        )
         ClusterMembershipFactory.create(cluster=user_cluster, user=self.user)
 
         internal_cluster = ClusterFactory.create(
             title="Global",
             internal_cluster=InternalClusterFactory.create(name="global"),
+            channel=ClusterChannelFactory.create(),
         )
         ClusterMembershipFactory.create(cluster=internal_cluster, user=self.user)
 
         # some cluster that user is not part of
-        ClusterFactory.create(title="Unknown")
+        channel = ClusterChannelFactory.create(name="unknown")
+        ClusterFactory.create(title="Unknown", channel=channel)
 
         response = self.client.get(path=self.url)
         expected_data = {
@@ -88,7 +93,8 @@ class ClusterListCreateAPIViewTests(APITestCase):
             }
         ):
             # some cluster that user is not part of
-            ClusterFactory.create(title="Unknown")
+            channel = ClusterChannelFactory.create(name="lalala")
+            ClusterFactory.create(title="Unknown", channel=channel)
 
             response = self.client.get(path=self.url)
             expected_data = {
@@ -104,17 +110,21 @@ class ClusterListCreateAPIViewTests(APITestCase):
 
     def test_list_user_clusters_with_matching_result(self):
         """Test list users cluster when user has matching result with the query parameter."""
-        user_cluster = ClusterFactory.create(title="A cluster I joined")
+        user_cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=ClusterChannelFactory.create()
+        )
         ClusterMembershipFactory.create(cluster=user_cluster, user=self.user)
 
         internal_cluster = ClusterFactory.create(
             title="Global",
             internal_cluster=InternalClusterFactory.create(name="global"),
+            channel=ClusterChannelFactory.create(),
         )
         ClusterMembershipFactory.create(cluster=internal_cluster, user=self.user)
 
         # some cluster that user is not part of
-        user_cluster_two = ClusterFactory.create(title="A new test")
+        channel = ClusterChannelFactory.create(name="draco")
+        user_cluster_two = ClusterFactory.create(title="A new test", channel=channel)
         ClusterMembershipFactory.create(cluster=user_cluster_two, user=self.user)
         query_params = {
             "search": "A clu",
@@ -143,7 +153,8 @@ class ClusterListCreateAPIViewTests(APITestCase):
 
     def test_list_cluster_with_no_results(self):
         """Test list cluster with no results."""
-        user_cluster = ClusterFactory.create(title="Unknown")
+        channel = ClusterChannelFactory.create(name="scars")
+        user_cluster = ClusterFactory.create(title="Unknown", channel=channel)
         ClusterMembershipFactory.create(cluster=user_cluster, user=self.user)
         query_params = {
             "search": "Not Existing",
@@ -179,6 +190,7 @@ class ClusterListCreateAPIViewTests(APITestCase):
 
         cluster = Cluster.objects.first()
         self.assertIsNotNone(cluster)
+        self.assertEqual(cluster.channel.name, f"privatechannel:${cluster.id}")
         expected_response_data = {
             "status": "Success",
             "code": 201,
@@ -212,8 +224,10 @@ class ClusterDetailAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create(name="pain")
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         ClusterMembershipFactory.create(cluster=self.cluster, user=self.user)
         assign_object_permissions(
             permissions=[VIEW_CLUSTER_PERMISSION, UPDATE_CLUSTER_PERMISSION],
@@ -247,7 +261,8 @@ class ClusterDetailAPIViewTests(APITestCase):
     def test_retrieve_cluster__case_2(self):
         """Test to show that a non cluster member can not retrieve a cluster."""
 
-        cluster = ClusterFactory.create(title="Some strange cluster.")
+        channel = channel = ClusterChannelFactory.create(name="command")
+        cluster = ClusterFactory.create(title="Some strange cluster.", channel=channel)
         url = reverse("cluster_api_v1:retrieve_update_cluster", args=[str(cluster.id)])
 
         expected_data = {
@@ -380,8 +395,10 @@ class ClusterMembershipListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.membership = ClusterMembershipFactory.create(
             cluster=self.cluster, user=self.user
         )
@@ -484,8 +501,10 @@ class ClusterMembersDetailAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.membership = ClusterMembershipFactory.create(
             cluster=self.cluster, user=self.user
         )
@@ -728,8 +747,6 @@ class ClusterMembersDetailAPIViewTests(APITestCase):
             "cluster_api_v1:retrieve_delete_cluster_member",
             args=[str(self.cluster.id), str(self.membership.id)],
         )
-
-        self.maxDiff = None
         response = self.client.delete(path=url)
         self.assertEqual(response.status_code, 403)
         self.assertEqual(
@@ -760,8 +777,10 @@ class ClusterInvitationListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.membership = ClusterMembershipFactory.create(
             cluster=self.cluster, user=self.user
         )
@@ -936,8 +955,10 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.membership = ClusterMembershipFactory.create(
             cluster=self.cluster, user=self.user
         )
@@ -1126,7 +1147,10 @@ class UserClusterInvitationListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.url = reverse("cluster_api_v1:list_users_cluster_invitation")
 
     def test_list_user_cluster_invitations(self):
@@ -1165,7 +1189,10 @@ class UserClusterInvitationDetailAPIView(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=channel
+        )
         self.invitation_record = ClusterInvitationFactory.create(
             user=self.user,
             created_by=self.user,

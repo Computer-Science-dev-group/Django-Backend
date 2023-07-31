@@ -435,12 +435,19 @@ class LoginAPIViewTests(APITestCase):
         refresh_token_mock.__str__ = lambda self: "refresh_token"
         refresh_token_mock.access_token.__str__ = lambda self: "access_token"
 
-        with mock.patch(
-            "rest_framework_simplejwt.tokens.RefreshToken.for_user",
-            side_effect=[refresh_token_mock],
-        ) as jwt_token_mock:
+        with (
+            mock.patch(
+                "rest_framework_simplejwt.tokens.RefreshToken.for_user",
+                side_effect=[refresh_token_mock],
+            ) as jwt_token_mock,
+            mock.patch(
+                "uia_backend.accounts.api.v1.serializers.connection_token",
+                side_effect=["ws_token"],
+            ) as instant_token_mock,
+        ):
             response = self.client.post(data=valid_data, path=self.url)
 
+        instant_token_mock.assert_called_once()
         jwt_token_mock.assert_called_once()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -451,6 +458,7 @@ class LoginAPIViewTests(APITestCase):
                 "data": {
                     "auth_token": "access_token",
                     "refresh_token": "refresh_token",
+                    "ws_token": "ws_token",
                     "profile": dict(
                         UserProfileSerializer().to_representation(instance=self.user)
                     ),
