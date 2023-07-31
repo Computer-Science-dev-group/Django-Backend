@@ -28,7 +28,7 @@ certificatesResolvers:
   letsencrypt:
     # https://docs.traefik.io/master/https/acme/#lets-encrypt
     acme:
-      email: "computer-science-dev-group@example.com"
+      email: "adebowalejojo2001@gmail.com"
       storage: /etc/traefik/acme/acme.json
       # https://docs.traefik.io/master/https/acme/#httpchallenge
       httpChallenge:
@@ -37,7 +37,7 @@ certificatesResolvers:
 http:
   routers:
     web-secure-router:
-      rule: "Host(`example.com`) || Host(`www.example.com`)"
+      rule: "Host(`staging.uiaapp.click`)"
       entryPoints:
         - web-secure
       middlewares:
@@ -48,10 +48,28 @@ http:
         certResolver: letsencrypt
 
     flower-secure-router:
-      rule: "Host(`example.com`)"
+      rule: "Host(`staging.uiaapp.click`)"
       entryPoints:
         - flower
       service: flower
+      tls:
+        # https://docs.traefik.io/master/routing/routers/#certresolver
+        certResolver: letsencrypt
+
+    centrifugo-secure-router:
+      rule: "Host(`staging.uiaapp.click`)"
+      entryPoints:
+        - centrifugo
+      service: centrifugo
+      tls:
+        # https://docs.traefik.io/master/routing/routers/#certresolver
+        certResolver: letsencrypt
+
+    metabase-secure-router:
+      rule: "Host(`staging.uiaapp.click`)"
+      entryPoints:
+        - metabase
+      service: metabase
       tls:
         # https://docs.traefik.io/master/routing/routers/#certresolver
         certResolver: letsencrypt

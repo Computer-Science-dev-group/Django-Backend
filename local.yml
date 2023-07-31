@@ -44,7 +44,7 @@ services:
     container_name: uia_backend_local_redis
 
   centrifugo:
-    image: centrifugo/centrifugo:v4
+    image: centrifugo/centrifugo:v5
     container_name: uia_backend_local_centrifugo
     depends_on:
       - redis

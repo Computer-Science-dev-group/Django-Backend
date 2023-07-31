@@ -4,7 +4,11 @@ from django.test import TestCase
 from freezegun import freeze_time
 
 from tests.accounts.test_models import UserModelFactory
-from tests.cluster.test_models import ClusterFactory, ClusterInvitationFactory
+from tests.cluster.test_models import (
+    ClusterChannelFactory,
+    ClusterFactory,
+    ClusterInvitationFactory,
+)
 from uia_backend.cluster.models import ClusterInvitation
 from uia_backend.cluster.tasks import deactivate_expired_cluster_invitation
 
@@ -12,7 +16,8 @@ from uia_backend.cluster.tasks import deactivate_expired_cluster_invitation
 class DeactivateExpiredClusterInvitation(TestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        self.channel = ClusterChannelFactory()
+        self.cluster = ClusterFactory.create(channel=self.channel)
 
     def test_method(self):
         """Test that only expired user invitation records are deactivated."""

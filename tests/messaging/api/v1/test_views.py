@@ -4,7 +4,11 @@ from rest_framework import serializers
 from rest_framework.test import APITestCase
 
 from tests.accounts.test_models import UserModelFactory
-from tests.cluster.test_models import ClusterFactory, ClusterMembershipFactory
+from tests.cluster.test_models import (
+    ClusterChannelFactory,
+    ClusterFactory,
+    ClusterMembershipFactory,
+)
 from tests.messaging.test_models import (
     CommentFactory,
     FileModelFactory,
@@ -24,7 +28,8 @@ from uia_backend.messaging.models import Comment, FileModel, Like, Post
 class PostListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(channel=channel)
         ClusterMembershipFactory(
             user=self.user,
             cluster=self.cluster,
@@ -253,7 +258,9 @@ class PostListAPIViewTests(APITestCase):
 
         # another clusters posts (shoudld not be listed )
         PostFactory.create_batch(
-            cluster=ClusterFactory.create(), created_by=self.user, size=3
+            cluster=ClusterFactory.create(channel=ClusterChannelFactory.create()),
+            created_by=self.user,
+            size=3,
         )
 
         response = self.client.get(path=self.url)
@@ -299,7 +306,8 @@ class PostListAPIViewTests(APITestCase):
 class PostDetailsAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(channel=channel)
 
         ClusterMembershipFactory(user=self.user, cluster=self.cluster)
 
@@ -445,7 +453,8 @@ class PostDetailsAPIViewTests(APITestCase):
 class PostLikeListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory()
+        self.cluster = ClusterFactory.create(channel=channel)
 
         ClusterMembershipFactory(user=self.user, cluster=self.cluster)
 
@@ -585,7 +594,8 @@ class PostLikeListAPIViewTests(APITestCase):
 class LikeDetailAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory()
+        self.cluster = ClusterFactory.create(channel=channel)
 
         ClusterMembershipFactory(user=self.user, cluster=self.cluster)
 
@@ -715,7 +725,8 @@ class LikeDetailAPIViewTests(APITestCase):
 class CommentListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory()
+        self.cluster = ClusterFactory.create(channel=channel)
 
         ClusterMembershipFactory(user=self.user, cluster=self.cluster)
 
@@ -898,7 +909,8 @@ class CommentListAPIViewTests(APITestCase):
 class RepliesListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.cluster = ClusterFactory.create()
+        channel = ClusterChannelFactory()
+        self.cluster = ClusterFactory.create(channel=channel)
 
         ClusterMembershipFactory(user=self.user, cluster=self.cluster)
 

@@ -1,6 +1,7 @@
 from datetime import timedelta
 
 from django.db import models
+from instant.models import Channel
 
 from uia_backend.accounts.models import CustomUser
 from uia_backend.cluster.constants import CLUSTER_PERMISSIONS
@@ -33,6 +34,7 @@ class Cluster(BaseAbstractModel):
         through_fields=["cluster", "user"],
         related_name="cluster_member_set",
     )
+    channel = models.OneToOneField(Channel, on_delete=models.CASCADE)
     created_by = models.ForeignKey(CustomUser, on_delete=models.PROTECT, null=True)
 
     class Meta:
