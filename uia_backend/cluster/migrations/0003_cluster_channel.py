@@ -17,16 +17,18 @@ def create_channel_for_clusters(apps, schema_editor):
         for cluster in Cluster.objects.using(db_alias).all():
             if cluster.internal_cluster:
                 channel=Channel.objects.using(db_alias).create(
-                    name=f'{settings.PUBLIC_CLUSTER_NAMESPACE}:{cluster.title.lower()}',
+                    name=f'{settings.PUBLIC_CLUSTER_NAMESPACE}:{cluster.title.lower().replace(" ", "")}',
                     level='public',
                 )
                 cluster.channel = channel
             else:
-                channel=Channel.objects.using(db_alias).create(
-                    name=f'{settings.PRIVATE_CLUSTER_NAMESPACE}:{cluster.title.lower()}',
+                channel, created=Channel.objects.using(db_alias).get_or_create(
+                    name=f'{settings.PRIVATE_CLUSTER_NAMESPACE}:{cluster.id}',
                     level='users',
                 )
-                cluster.channel = channel
+
+                if created:
+                    cluster.channel = channel
             cluster.save()
 
 class Migration(migrations.Migration):
