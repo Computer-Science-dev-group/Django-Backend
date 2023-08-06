@@ -5,6 +5,7 @@ from factory.django import DjangoModelFactory
 from uia_backend.accounts.models import (
     CustomUser,
     EmailVerification,
+    Follows,
     FriendShip,
     FriendShipInvitation,
     PasswordResetAttempt,
@@ -101,3 +102,8 @@ class FriendShipFactory(DjangoModelFactory):
 class UserFriendShipSettingsFactory(DjangoModelFactory):
     class Meta:
         model = UserFriendShipSettings
+
+
+class FollowsFactory(DjangoModelFactory):
+    class Meta:
+        model = Follows

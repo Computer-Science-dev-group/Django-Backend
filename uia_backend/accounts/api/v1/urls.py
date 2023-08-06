@@ -10,6 +10,9 @@ from uia_backend.accounts.api.v1.views import (
     ResetPasswordAPIView,
     ResetPasswordRequestAPIView,
     UserFeedAPIView,
+    UserFollowerListAPIView,
+    UserFollowingDetailAPIView,
+    UserFollowingListAPIView,
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
     UserProfileAPIView,
@@ -39,16 +42,29 @@ urlpatterns = [
         name="verify_password_reset_otp",
     ),
     path("reset-password/", ResetPasswordAPIView.as_view(), name="reset_password"),
-    # AUTHENTICATED USER SPECIFIC VIEWS
-    path("me/profile/", UserProfileAPIView.as_view(), name="user_profile"),
-    path(
-        "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
-    ),
     path("list/", UserProfileListView.as_view(), name="accounts_list"),
     path(
         "list/<uuid:user_id>/",
         UserProfileDetailAPIView.as_view(),
         name="accounts_detail",
+    ),
+    path(
+        "list/followers/", UserFollowerListAPIView.as_view(), name="user_follower_list"
+    ),
+    path(
+        "list/following/",
+        UserFollowingListAPIView.as_view(),
+        name="user_following_list",
+    ),
+    path(
+        "list/following/<uuid:user_id>/",
+        UserFollowingDetailAPIView.as_view(),
+        name="user_following_detail",
+    ),
+    # AUTHENTICATED USER SPECIFIC VIEWS
+    path("me/profile/", UserProfileAPIView.as_view(), name="user_profile"),
+    path(
+        "me/change-password/", ChangePasswordAPIView.as_view(), name="change_password"
     ),
     path(
         "me/friendships/", UserFriendShipsListAPIView.as_view(), name="user_friendships"
