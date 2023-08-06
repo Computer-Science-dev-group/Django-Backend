@@ -42,6 +42,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "faculty",
             "department",
             "year_of_graduation",
+            "date_of_birth",
         ]
         extra_kwargs = {"password": {"write_only": True}}
 
@@ -72,6 +73,20 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             or date_time_object.year > timezone.now().year
         ):
             raise serializers.ValidationError(error_message)
+
+        return value
+
+    def validate_date_of_birth(self, value: str) -> str:
+        msg = "Your age should be between 18 and 150"
+
+        current_year = datetime.today().strftime("%Y")
+
+        input_year = datetime.strftime(value, "%Y")
+
+        age = int(current_year) - int(input_year)
+
+        if age < 18 or age > 150:
+            raise serializers.ValidationError(msg)
 
         return value
 
