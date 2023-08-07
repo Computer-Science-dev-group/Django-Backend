@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime, timedelta
 from typing import Any
+from typing_extensions import deprecated
 
 from django.contrib.auth.password_validation import password_changed, validate_password
 from django.core import signing
@@ -34,6 +35,9 @@ logger = logging.getLogger()
 
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
+    faculty = serializers.ChoiceField(required=True, choices=constants.FACULTY_CHOICES)
+    department = serializers.ChoiceField(required=True, choices=constants.DEPARTMENT_CHOICES)
+
     class Meta:
         model = CustomUser
         fields = [

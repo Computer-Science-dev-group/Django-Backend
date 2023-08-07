@@ -54,7 +54,7 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
     gender = models.CharField(max_length=10, blank=True, null=True)
     date_of_birth = models.DateField(blank=True, null=True)
     faculty = models.CharField(max_length=60)
-    department = models.CharField(max_length=60)
+    department = models.CharField(max_length=255)
     year_of_graduation = models.CharField(max_length=4)
     is_active = models.BooleanField(default=False)
     is_verified = models.BooleanField(default=False)
