@@ -181,6 +181,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
         "faculty",
         "follower_count",
         "following_count",
+        "ws_channel_name",
     ]
 
     def setUp(self) -> None:

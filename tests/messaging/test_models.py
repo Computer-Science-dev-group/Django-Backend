@@ -4,7 +4,7 @@ from django.utils import timezone
 from factory.django import DjangoModelFactory
 
 from tests.accounts.test_models import UserModelFactory
-from tests.cluster.test_models import ClusterChannelFactory, ClusterFactory
+from tests.cluster.test_models import ClusterFactory
 from uia_backend.messaging.models import (
     Comment,
     FileModel,
@@ -50,10 +50,9 @@ class LikeFactory(DjangoModelFactory):
 class LikeTests(TestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        channel = ClusterChannelFactory()
         self.post = PostFactory.create(
             created_by=self.user,
-            cluster=ClusterFactory.create(channel=channel),
+            cluster=ClusterFactory.create(),
         )
 
         self.comment = CommentFactory.create(post=self.post, created_by=self.user)
@@ -99,19 +98,18 @@ class LikeTests(TestCase):
 class ShareTests(TestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        channel = ClusterChannelFactory()
         self.post = PostFactory.create(
             created_by=self.user,
-            cluster=ClusterFactory.create(channel=channel),
+            cluster=ClusterFactory.create(),
         )
 
     def test_unicode(self):
-        channel = ClusterChannelFactory()
         share = ShareFactory.create(
             created_by=self.user,
             shared_post=self.post,
             new_post=PostFactory.create(
-                created_by=self.user, cluster=ClusterFactory.create(channel=channel)
+                created_by=self.user,
+                cluster=ClusterFactory.create(),
             ),
             cluster=self.post.cluster,
         )

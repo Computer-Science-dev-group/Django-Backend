@@ -1,13 +1,11 @@
 from logging import getLogger
 from typing import Any
 
+from django.db.models import Count, F
 from rest_framework import serializers
 
 from uia_backend.experiments.constants import ER_001_PRE_ALPHA_USER_TESTING_TAG
-from uia_backend.experiments.models import (
-    ExperimentConfig,
-    PreAlphaUserTestingExperiment,
-)
+from uia_backend.experiments.models import PreAlphaUserTestingExperiment
 
 logger = getLogger()
 
@@ -23,21 +21,25 @@ class PreAplhaTestingPopulationSerializer(serializers.Serializer):
         """Overidden method"""
 
     def to_representation(self, instance: Any) -> Any:
-        try:
-            er_config = ExperimentConfig.objects.get(
-                experiment_tag=ER_001_PRE_ALPHA_USER_TESTING_TAG, is_active=True
+        exprriment_population = (
+            PreAlphaUserTestingExperiment.objects.filter(
+                experiment_config__experiment_tag=ER_001_PRE_ALPHA_USER_TESTING_TAG,
+                experiment_config__is_active=True,
             )
-        except ExperimentConfig.DoesNotExist:
-            logger.error(
-                "uia_backend::accounts::api::v1::views::UserRegistrationAPIView::"
-                " ExperimentConfig not found | is inactive.",
-                exc_info={"experiment_tag": ER_001_PRE_ALPHA_USER_TESTING_TAG},
+            .annotate(
+                max_allowed_user_population=F(
+                    "experiment_config__required_user_population"
+                ),
+                count=Count("id"),
             )
-            return {"enrolled_user_population": 0, "max_allowed_user_population": 0}
+            .first()
+        )
 
         return {
-            "enrolled_user_population": PreAlphaUserTestingExperiment.objects.filter(
-                experiment_config=er_config
-            ).count(),
-            "max_allowed_user_population": er_config.required_user_population,
+            "enrolled_user_population": exprriment_population.count
+            if exprriment_population
+            else 0,
+            "max_allowed_user_population": exprriment_population.max_allowed_user_population
+            if exprriment_population
+            else 0,
         }

@@ -1,7 +1,7 @@
 from datetime import timedelta
 
+from django.conf import settings
 from django.db import models
-from instant.models import Channel
 
 from uia_backend.accounts.models import CustomUser
 from uia_backend.cluster.constants import CLUSTER_PERMISSIONS
@@ -34,11 +34,20 @@ class Cluster(BaseAbstractModel):
         through_fields=["cluster", "user"],
         related_name="cluster_member_set",
     )
-    channel = models.OneToOneField(Channel, on_delete=models.CASCADE)
     created_by = models.ForeignKey(CustomUser, on_delete=models.PROTECT, null=True)
 
     class Meta:
         permissions = CLUSTER_PERMISSIONS
+
+    @property
+    def channel_name(self):
+        """Return centrifugo channel name for model."""
+        channel_name = (
+            f"{settings.PUBLIC_CLUSTER_NAMESPACE}:{self.id}"
+            if self.internal_cluster
+            else f"{settings.PRIVATE_CLUSTER_NAMESPACE}:{self.id}"
+        )
+        return channel_name
 
 
 class ClusterInvitation(BaseAbstractModel):

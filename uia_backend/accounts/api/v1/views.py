@@ -17,7 +17,6 @@ from rest_framework import filters, generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from config.settings.base import CACHE_DURATION
 from uia_backend.accounts.api.v1.queries import USER_FEED_QUERY
 from uia_backend.accounts.api.v1.serializers import (
     ChangePasswordSerializer,
@@ -309,7 +308,7 @@ class UserProfileListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["first_name", "last_name", "display_name"]
 
-    @method_decorator(cache_page(CACHE_DURATION))
+    @method_decorator(cache_page(settings.CACHE_DURATION))
     def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().list(request, *args, **kwargs)
 
@@ -322,7 +321,7 @@ class UserProfileDetailAPIView(generics.RetrieveAPIView):
 
     def get_object(self) -> CustomUser:
         return get_object_or_404(
-            CustomUser,
+            CustomUser.objects.prefetch_related("channel"),
             id=self.kwargs["user_id"],
             is_active=True,
         )

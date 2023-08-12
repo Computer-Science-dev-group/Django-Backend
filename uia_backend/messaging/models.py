@@ -91,6 +91,11 @@ class Post(BaseAbstractModel):
         CustomUser, related_name="posts", on_delete=models.PROTECT
     )
 
+    @property
+    def channel_name(self) -> str:
+        """Return centrifugo channel_name."""
+        return f"${settings.POST_NAMESPACE}:{self.id}"
+
 
 class Comment(BaseAbstractModel):
     """Model representing a comment to a post or a reply to another comment."""

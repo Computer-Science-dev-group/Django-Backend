@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.files.uploadedfile import UploadedFile
 
 from tests.accounts.test_models import UserModelFactory
-from tests.cluster.test_models import ClusterChannelFactory, ClusterFactory
+from tests.cluster.test_models import ClusterFactory
 from tests.messaging.test_models import CommentFactory, FileModelFactory, PostFactory
 from uia_backend.libs.testutils import CustomSerializerTests, get_test_image_file
 from uia_backend.messaging.api.v1.serializers import (
@@ -34,6 +34,7 @@ class PostSerializerTests(CustomSerializerTests):
         "share_comment",
         "liked_by_user",
         "files",
+        "ws_channel_name",
     ]
 
     def setUp(self) -> None:
@@ -42,10 +43,9 @@ class PostSerializerTests(CustomSerializerTests):
 
         request = MagicMock()
         request.user = authenticated_user
-
         post = PostFactory.create(
             created_by=authenticated_user,
-            cluster=ClusterFactory.create(channel=ClusterChannelFactory.create()),
+            cluster=ClusterFactory.create(),
         )
         comment = CommentFactory.create(post=post, created_by=authenticated_user)
 
@@ -156,10 +156,9 @@ class CommentSerializerTests(CustomSerializerTests):
 
         request = MagicMock()
         request.user = authenticated_user
-
         post = PostFactory.create(
             created_by=authenticated_user,
-            cluster=ClusterFactory.create(channel=ClusterChannelFactory.create()),
+            cluster=ClusterFactory.create(),
         )
         comment = CommentFactory.create(post=post, created_by=authenticated_user)
 

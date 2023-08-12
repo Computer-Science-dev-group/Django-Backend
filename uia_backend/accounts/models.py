@@ -1,5 +1,6 @@
 import uuid
 
+from django.conf import settings
 from django.contrib.auth.models import (
     AbstractBaseUser,
     BaseUserManager,
@@ -77,6 +78,10 @@ class CustomUser(BaseAbstractModel, AbstractBaseUser, PermissionsMixin):
 
     def __str__(self) -> str:
         return self.email
+
+    @property
+    def channel_name(self) -> str:
+        return f"${settings.USER_NAMESPACE}:{self.id}#{self.id}"
 
 
 class Follows(BaseAbstractModel):

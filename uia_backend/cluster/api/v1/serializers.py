@@ -1,13 +1,10 @@
 import logging
-import uuid
 from datetime import timedelta
 from typing import Any
 
-from django.conf import settings
-from instant.models import Channel
 from rest_framework import serializers
 
-from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
+from uia_backend.accounts.api.v1.serializers import ProfileSerializer
 from uia_backend.accounts.models import CustomUser
 from uia_backend.cluster.constants import (
     ADD_CLUSTER_MEMBER_PERMISSION,
@@ -33,13 +30,6 @@ class ClusterSerializer(serializers.ModelSerializer):
 
     def create(self, validated_data: dict[str, Any]) -> Cluster:
         """Create a cluster."""
-        cluster_id = uuid.uuid4()
-        channel = Channel.objects.create(
-            name=f"{settings.PRIVATE_CLUSTER_NAMESPACE}:{cluster_id}",
-            level=Channel.Level.Users,
-        )
-        validated_data["channel"] = channel
-        validated_data["id"] = cluster_id
         cluster = super().create(validated_data)
 
         # we need to add the cluster creatot to the list of cluster members
@@ -132,7 +122,7 @@ class ClusterInvitationSerializer(serializers.ModelSerializer):
 
 
 class ClusterMembershipSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(read_only=True)
+    user = ProfileSerializer(read_only=True)
 
     class Meta:
         model = ClusterMembership

@@ -1,7 +1,9 @@
 import logging
 import secrets
+import time
 from uuid import UUID
 
+import jwt
 import requests
 from dateutil.relativedelta import relativedelta
 from django.conf import settings
@@ -33,7 +35,8 @@ def send_user_registration_email_verification_mail(
     signer = signing.TimestampSigner()
     signature = signer.sign_object(str(verification_record.id))
     url = reverse("accounts_api_v1:email_verification", args=[signature])
-
+    # NOTE (Joseph): Remove this before deployment
+    Logger.info(msg=request.build_absolute_uri(location=url))
     send_template_email_task.delay(
         recipients=[user.email],
         internal_tracker_ids=[str(verification_record.internal_tracker_id)],
@@ -128,3 +131,12 @@ def send_password_reset_otp_email_notification(
             },
         },
     )
+
+
+def generate_centrifugo_connection_token(user: CustomUser) -> str:
+    claims = {
+        "sub": str(user.id),
+        "exp": int(time.time()) + settings.CENTRIFUGO_TOKEN_TTL,
+    }
+    token = jwt.encode(claims, settings.CENTRIFUGO_HMAC_KEY, algorithm="HS256")
+    return token

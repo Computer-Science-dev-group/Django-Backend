@@ -22,7 +22,10 @@ from tests.accounts.test_models import (
     UserFriendShipSettingsFactory,
     UserModelFactory,
 )
-from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
+from uia_backend.accounts.api.v1.serializers import (
+    ProfileSerializer,
+    UserProfileSerializer,
+)
 from uia_backend.accounts.constants import (
     PASSWORD_RESET_ACTIVE_PERIOD,
     PASSWORD_RESET_TEMPLATE_ID,
@@ -293,6 +296,7 @@ class UserProfileAPIViewTests(APITestCase):
                     "date_of_birth": self.user.date_of_birth.isoformat(),
                     "follower_count": 0,
                     "following_count": 0,
+                    "ws_channel_name": f"$users:{self.user.id}#{self.user.id}",
                 },
             },
         )
@@ -314,7 +318,7 @@ class UserProfileAPIViewTests(APITestCase):
 
         self.client.force_authenticate(user=self.user)
         response = self.client.put(path=self.url, data=user_data, format="multipart")
-
+        self.maxDiff = None
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
             response.json(),
@@ -337,6 +341,7 @@ class UserProfileAPIViewTests(APITestCase):
                     "year_of_graduation": self.user.year_of_graduation,
                     "follower_count": 0,
                     "following_count": 0,
+                    "ws_channel_name": f"$users:{self.user.id}#{self.user.id}",
                 },
             },
         )
@@ -447,13 +452,13 @@ class LoginAPIViewTests(APITestCase):
                 side_effect=[refresh_token_mock],
             ) as jwt_token_mock,
             mock.patch(
-                "uia_backend.accounts.api.v1.serializers.connection_token",
+                "uia_backend.accounts.api.v1.serializers.generate_centrifugo_connection_token",
                 side_effect=["ws_token"],
-            ) as instant_token_mock,
+            ) as mock_generate_cent_token,
         ):
             response = self.client.post(data=valid_data, path=self.url)
-
-        instant_token_mock.assert_called_once()
+        self.maxDiff = None
+        mock_generate_cent_token.assert_called_once()
         jwt_token_mock.assert_called_once()
         self.assertEqual(response.status_code, 200)
         self.assertEqual(
@@ -1497,7 +1502,7 @@ class UserFollowerListAPIViewTests(APITestCase):
                             self.follower_user_2_to_auth_record.created_datetime
                         ),
                         "user": dict(
-                            UserProfileSerializer().to_representation(
+                            ProfileSerializer().to_representation(
                                 instance=self.follower_user_2
                             )
                         ),
@@ -1507,7 +1512,7 @@ class UserFollowerListAPIViewTests(APITestCase):
                             self.follower_user_1_to_auth_record.created_datetime
                         ),
                         "user": dict(
-                            UserProfileSerializer().to_representation(
+                            ProfileSerializer().to_representation(
                                 instance=self.follower_user_1
                             )
                         ),
@@ -1541,7 +1546,7 @@ class UserFollowerListAPIViewTests(APITestCase):
                             auth_to_follower_user_1_record.created_datetime
                         ),
                         "user": dict(
-                            UserProfileSerializer().to_representation(
+                            ProfileSerializer().to_representation(
                                 instance=self.authenticated_user
                             )
                         ),
@@ -1625,7 +1630,7 @@ class UserFollowingListAPIViewTests(APITestCase):
                             self.follow_record_1.created_datetime
                         ),
                         "user": dict(
-                            UserProfileSerializer().to_representation(
+                            ProfileSerializer().to_representation(
                                 instance=self.following_user_1
                             )
                         ),
@@ -1662,7 +1667,7 @@ class UserFollowingListAPIViewTests(APITestCase):
                             follow_record_2.created_datetime,
                         ),
                         "user": dict(
-                            UserProfileSerializer().to_representation(
+                            ProfileSerializer().to_representation(
                                 instance=self.following_user_1
                             )
                         ),
@@ -1721,7 +1726,7 @@ class UserFollowingListAPIViewTests(APITestCase):
                         follow_records.first().created_datetime,
                     ),
                     "user": dict(
-                        UserProfileSerializer().to_representation(instance=self.user_2)
+                        ProfileSerializer().to_representation(instance=self.user_2)
                     ),
                 },
             },
@@ -1748,7 +1753,7 @@ class UserFollowingListAPIViewTests(APITestCase):
                         follow_records.first().created_datetime,
                     ),
                     "user": dict(
-                        UserProfileSerializer().to_representation(instance=self.user_2)
+                        ProfileSerializer().to_representation(instance=self.user_2)
                     ),
                 },
             },

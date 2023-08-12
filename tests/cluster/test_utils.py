@@ -2,7 +2,6 @@ from django.test import TestCase
 
 from tests.accounts.test_models import UserModelFactory
 from tests.cluster.test_models import (
-    ClusterChannelFactory,
     ClusterFactory,
     ClusterMembershipFactory,
     InternalClusterFactory,
@@ -14,7 +13,6 @@ from uia_backend.cluster.utils import ClusterManager
 class ClusterManagerTests(TestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create()
-        self.channel = ClusterChannelFactory.create()
         self.cluster_manager = ClusterManager(user=self.user)
 
     def test__create_default_cluster__cluster_already_exits__case_1(self):
@@ -25,10 +23,7 @@ class ClusterManagerTests(TestCase):
         # SETUP
         cluster_name = "Some Default Cluster"
         internal_cluster = InternalClusterFactory.create(name="Some Default Cluster")
-        channel = ClusterChannelFactory.create(name="vashtor")
-        ClusterFactory.create(
-            internal_cluster=internal_cluster, title=cluster_name, channel=channel
-        )
+        ClusterFactory.create(internal_cluster=internal_cluster, title=cluster_name)
 
         # TEST
         self.cluster_manager._create_default_cluster(name=cluster_name, description="")
@@ -77,18 +72,15 @@ class ClusterManagerTests(TestCase):
         self.assertEqual(internal_cluster.cluster, cluster)
         self.assertEqual(internal_cluster.name, cluster_name)
         self.assertEqual(cluster.title, cluster_name.capitalize())
-        self.assertEqual(cluster.channel.name, "publicchannel:somedefaultcluster")
 
     def test__create_membership__case_1(self):
         """Test behaviour of ClusterManager._create_membership when user is not a member."""
 
         # SETUP
         internal_cluster = InternalClusterFactory.create(name="Some Default Cluster")
-        channel = ClusterChannelFactory.create(name="ferus")
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title=internal_cluster.name,
-            channel=channel,
         )
 
         # TEST
@@ -104,11 +96,9 @@ class ClusterManagerTests(TestCase):
 
         # SETUP
         internal_cluster = InternalClusterFactory.create(name="Some Default Cluster")
-        channel = ClusterChannelFactory.create(name="channel")
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title=internal_cluster.name,
-            channel=channel,
         )
         membership = ClusterMembershipFactory.create(cluster=cluster, user=self.user)
 
@@ -129,11 +119,9 @@ class ClusterManagerTests(TestCase):
         # SETUP
         global_cluster_name = "global"
         internal_cluster = InternalClusterFactory.create(name=global_cluster_name)
-        channel = ClusterChannelFactory.create(name=global_cluster_name)
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title="Global",
-            channel=channel,
         )
 
         # TEST
@@ -183,11 +171,9 @@ class ClusterManagerTests(TestCase):
         # SETUP
         faculty_cluster_name = f"faculty of {self.user.faculty}"
         internal_cluster = InternalClusterFactory.create(name=faculty_cluster_name)
-        channel = ClusterChannelFactory.create(name=faculty_cluster_name)
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title=faculty_cluster_name.capitalize(),
-            channel=channel,
         )
 
         # TEST
@@ -240,11 +226,9 @@ class ClusterManagerTests(TestCase):
         # SETUP
         department_cluster_name = f"{self.user.department} department"
         internal_cluster = InternalClusterFactory.create(name=department_cluster_name)
-        channel = ClusterChannelFactory.create(name=department_cluster_name)
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title=department_cluster_name.capitalize(),
-            channel=channel,
         )
 
         # TEST
@@ -300,11 +284,9 @@ class ClusterManagerTests(TestCase):
         # SETUP
         yog_cluster_name = f"{self.user.year_of_graduation} set"
         internal_cluster = InternalClusterFactory.create(name=yog_cluster_name)
-        channel = ClusterChannelFactory.create(name="gorgon")
         cluster = ClusterFactory.create(
             internal_cluster=internal_cluster,
             title=yog_cluster_name.capitalize(),
-            channel=channel,
         )
 
         # TEST

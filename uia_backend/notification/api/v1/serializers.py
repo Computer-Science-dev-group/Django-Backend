@@ -2,7 +2,7 @@ from typing import Any
 
 from rest_framework import serializers
 
-from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
+from uia_backend.accounts.api.v1.serializers import ProfileSerializer
 from uia_backend.accounts.models import CustomUser
 from uia_backend.notification.models import NotificationModel
 
@@ -14,7 +14,7 @@ class GenericNotificationRelatedField(serializers.RelatedField):
         # NOTE: This needs to be updated as we progress
 
         if isinstance(value, CustomUser):
-            serializer = UserProfileSerializer(instance=value)
+            serializer = ProfileSerializer(instance=value)
             data = serializer.data
         else:
             data = None

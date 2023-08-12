@@ -7,7 +7,7 @@ from rest_framework.test import APITestCase
 
 from tests.accounts.test_models import UserModelFactory
 from tests.notification.test_models import NotificationModelFactory
-from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
+from uia_backend.accounts.api.v1.serializers import ProfileSerializer
 
 
 class NotificationListAPIViewTests(APITestCase):
@@ -56,7 +56,7 @@ class NotificationListAPIViewTests(APITestCase):
         )
 
         user_profile_data = dict(
-            UserProfileSerializer().to_representation(instance=self.user)
+            ProfileSerializer().to_representation(instance=self.user)
         )
 
         response = self.client.get(path=self.url)
@@ -124,7 +124,7 @@ class NotificationDetailAPIViewTests(APITestCase):
         )
         self.maxDiff = None
         self.user_profile_data = dict(
-            UserProfileSerializer().to_representation(instance=self.user)
+            ProfileSerializer().to_representation(instance=self.user)
         )
         self.url = reverse(
             "notification_api_v1:notification_details",

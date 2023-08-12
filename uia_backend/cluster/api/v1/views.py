@@ -102,7 +102,9 @@ class ClusterListCreateAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self) -> QuerySet:
         """Get users clusters."""
-        return self.request.user.cluster_member_set.all()
+        return Cluster.objects.select_related("internal_cluster").filter(
+            members__id=self.request.user.id,
+        )
 
     def perform_create(self, serializer: ClusterSerializer) -> None:
         serializer.save(created_by=self.request.user)
