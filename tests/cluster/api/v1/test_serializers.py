@@ -2,7 +2,11 @@ import uuid
 from unittest.mock import MagicMock
 
 from tests.accounts.test_models import UserModelFactory
-from tests.cluster.test_models import ClusterFactory, ClusterMembershipFactory
+from tests.cluster.test_models import (
+    ClusterChannelFactory,
+    ClusterFactory,
+    ClusterMembershipFactory,
+)
 from uia_backend.cluster.api.v1.serializers import (
     ClusterEventSerializer,
     ClusterInvitationSerializer,
@@ -161,7 +165,8 @@ class ClusterEventSerializerTests(CustomSerializerTests):
             is_active=True, email="email1@example.com"
         )
         # Make sure a user is a member of a cluster
-        self.cluster = ClusterFactory.create()
+        self.channel = ClusterChannelFactory.create()
+        self.cluster = ClusterFactory.create(channel=self.channel)
         ClusterMembershipFactory.create(cluster=self.cluster, user=authenticated_user)
         request = MagicMock()
         request.user = authenticated_user

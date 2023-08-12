@@ -1312,7 +1312,10 @@ class ClusterEventListCreateAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.user = UserModelFactory.create(email="user@example.com", is_active=True)
         self.client.force_authenticate(user=self.user)
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        self.channel = ClusterChannelFactory.create(name="draco")
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=self.channel
+        )
         # Make sure the user is a member of the cluster
         ClusterMembershipFactory.create(user=self.user, cluster=self.cluster)
 
@@ -1450,7 +1453,10 @@ class RSVPClusterEventAPIViewTests(APITestCase):
             email="thesecond@third.com", is_active=True
         )
         self.client.force_authenticate(user=self.user_2)
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        self.channel = ClusterChannelFactory.create(name="draco")
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=self.channel
+        )
         # Make sure the users are members of the cluster
         ClusterMembershipFactory.create(user=self.user_1, cluster=self.cluster)
         ClusterMembershipFactory.create(user=self.user_2, cluster=self.cluster)
@@ -1505,7 +1511,10 @@ class CancelClusterEventAPIViewTests(APITestCase):
             email="thesecond@third.com", is_active=True
         )
         self.client.force_authenticate(user=self.user_2)
-        self.cluster = ClusterFactory.create(title="A cluster I joined")
+        self.channel = ClusterChannelFactory.create(name="draco")
+        self.cluster = ClusterFactory.create(
+            title="A cluster I joined", channel=self.channel
+        )
         # Make sure the users are members of the cluster
         ClusterMembershipFactory.create(user=self.user_1, cluster=self.cluster)
         ClusterMembershipFactory.create(user=self.user_2, cluster=self.cluster)
