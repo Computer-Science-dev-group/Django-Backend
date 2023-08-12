@@ -148,25 +148,29 @@ def send_event_creation_notification_mail(
 ) -> None:
     """Send an event creation notification to all attendees except the creator."""
     creator = instance.created_by
-    attendees = instance.eventattendance_set.exclude(attendee=creator)
-    for attendance in attendees:
-        user = attendance.attendee
-        send_template_email_task.delay(
-            recipients=[user.email],
-            internal_tracker_ids=[str(user.id)],
-            template_id=constants.PASSWORD_RESET_TEMPLATE_ID,
-            template_merge_data={
-                user.email: {
-                    "creator": instance.creator,
-                    "event_location": instance.location,
-                    "event_name": instance.title,
-                    "event_link": instance.link,
-                    # NOTE: The arguments in the accept link should be changed
-                    # later to query parameters for the frontend to consume
-                    "accept_link": reverse(
-                        "cluster_api_v1:accept_cluster_event",
-                        args=[str(instance.cluster.id), str(instance.id)],
-                    ),
-                },
-            },
-        )
+    attendees = instance.eventattendance_set.exclude(attendee=creator).values(
+        "attendee__email", "attendee__id"
+    )
+    email_recipients = [attendee["attendee__email"] for attendee in attendees]
+    internal_tracker_ids = [str(attendee["attendee__id"]) for attendee in attendees]
+
+    merge_data = {
+        attendee["attendee__email"]: {
+            "creator": instance.creator,
+            "event_location": instance.location,
+            "event_name": instance.title,
+            "event_link": instance.link,
+            "accept_link": reverse(
+                "cluster_api_v1:accept_cluster_event",
+                args=[str(instance.cluster.id), str(instance.id)],
+            ),
+        }
+        for attendee in attendees
+    }
+
+    send_template_email_task.delay(
+        recipients=email_recipients,
+        internal_tracker_ids=internal_tracker_ids,
+        template_id=constants.EVENT_NOTIFICATION_TEMPLATE_ID,
+        template_merge_data=merge_data,
+    )

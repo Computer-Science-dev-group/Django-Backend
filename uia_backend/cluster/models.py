@@ -123,18 +123,8 @@ class ClusterEvent(BaseAbstractModel):
 
     def cancel(self):
         self.status = ClusterEvent.EVENT_STATUS_CANCELLED
-        self.save()
+        self.save(update_fields=["status"])
         # Notify attendees about event cancellation
-
-    def save(self, *args, **kwargs):
-        # Checks if the User object has not been created
-        if ClusterEvent.objects.filter(pk=self.pk).exists() is False:
-            cluster_membership = ClusterMembership.objects.filter(
-                user=self.created_by, cluster=self.cluster
-            ).first()
-            if not cluster_membership:
-                raise Exception("User is not a member of the cluster.")
-        super().save(*args, **kwargs)
 
 
 class EventAttendance(BaseAbstractModel):
@@ -155,8 +145,8 @@ class EventAttendance(BaseAbstractModel):
 
     def mark_attending(self):
         self.status = EventAttendance.EVENT_ATTENDANCE_STATUS_ATTENDING
-        self.save()
+        self.save(update_fields=["status"])
 
     def mark_not_attending(self):
         self.status = EventAttendance.EVENT_ATTENDANCE_STATUS_NOT_ATTENDING
-        self.save()
+        self.save(update_fields=["status"])

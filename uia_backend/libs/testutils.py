@@ -43,7 +43,6 @@ class CustomSerializerTests(TestCase):
 
         for field_name, field in serializer.get_fields().items():
             if field.required:
-                print("THis are the field name", field_name)
                 required_fields.append(field_name)
 
         self.assertCountEqual(required_fields, self.REQUIRED_FIELDS)
