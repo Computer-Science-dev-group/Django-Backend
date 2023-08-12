@@ -1,7 +1,7 @@
 from django.conf import settings
 from django.db import transaction
-from instant.models import Channel
 from django.urls import reverse
+from instant.models import Channel
 
 from uia_backend.accounts.models import CustomUser
 from uia_backend.cluster import constants
