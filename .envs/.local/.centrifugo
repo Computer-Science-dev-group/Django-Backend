@@ -12,4 +12,4 @@ CENTRIFUGO_DEBUG="true"
 CENTRIFUGO_ENGINE="redis"
 CENTRIFUGO_REDIS_ADDRESS=redis://redis:6379/0
 CENTRIFUGO_HEALTH="true"
-CENTRIFUGO_NAMESPACES='[{"name": "publicchannel", "allow_subscribe_for_client": true}, {"name": "privatechannel"}, {"name": "dm", "allow_presence_for_client": true}]'
+CENTRIFUGO_NAMESPACES='[{"name": "publicchannel", "allow_subscribe_for_client": true},{"name": "privatechannel"},{"name": "dm", "allow_presence_for_client": true},{"name": "users", "allow_subscribe_for_client": true},{"name": "posts", "allow_subscribe_for_client": true}]'

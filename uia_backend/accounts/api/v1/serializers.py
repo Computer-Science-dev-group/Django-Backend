@@ -7,7 +7,6 @@ from django.core import signing
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
 from django.utils import timezone
-from instant.token import connection_token
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -22,6 +21,7 @@ from uia_backend.accounts.models import (
     UserFriendShipSettings,
 )
 from uia_backend.accounts.utils import (
+    generate_centrifugo_connection_token,
     generate_reset_password_otp,
     send_password_reset_otp_email_notification,
     send_user_password_change_email_notification,
@@ -157,6 +157,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
     follower_count = serializers.IntegerField(read_only=True)
     following_count = serializers.IntegerField(read_only=True)
 
+    ws_channel_name = serializers.CharField(read_only=True, source="channel_name")
+
     class Meta:
         model = CustomUser
         fields = [
@@ -175,6 +177,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "date_of_birth",
             "follower_count",
             "following_count",
+            "ws_channel_name",
         ]
 
         read_only_fields = [
@@ -184,6 +187,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "faculty",
             "follower_count",
             "following_count",
+            "ws_channel_name",
         ]
 
     def create(self, validated_data: Any) -> Any:
@@ -207,6 +211,33 @@ class UserProfileSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         data["follower_count"] = Follows.objects.filter(user_to=instance).count()
         data["following_count"] = Follows.objects.filter(user_from=instance).count()
+        data["display_name"] = (
+            f"@{instance.display_name.lower()}" if instance.display_name else None
+        )
+        return data
+
+
+class ProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomUser
+        fields = read_only_fields = [
+            "id",
+            "first_name",
+            "last_name",
+            "profile_picture",
+            "cover_photo",
+            "phone_number",
+            "display_name",
+            "year_of_graduation",
+            "department",
+            "faculty",
+            "bio",
+            "gender",
+            "date_of_birth",
+        ]
+
+    def to_representation(self, instance: CustomUser) -> dict[str, Any]:
+        data = super().to_representation(instance)
         data["display_name"] = (
             f"@{instance.display_name.lower()}" if instance.display_name else None
         )
@@ -278,7 +309,7 @@ class LoginSerializer(serializers.Serializer[CustomUser]):
         data = {
             "refresh_token": self.validated_data["refresh_token"],
             "auth_token": self.validated_data["auth_token"],
-            "ws_token": connection_token(user=instance),
+            "ws_token": generate_centrifugo_connection_token(user=instance),
             "profile": UserProfileSerializer().to_representation(instance=instance),
         }
         return data
@@ -605,7 +636,7 @@ class FollowingSerializer(serializers.ModelSerializer):
         write_only=True,
         queryset=CustomUser.objects.filter(is_active=True),
     )
-    user = UserProfileSerializer(source="user_to", read_only=True)
+    user = ProfileSerializer(source="user_to", read_only=True)
 
     class Meta:
         model = Follows
@@ -629,7 +660,7 @@ class FollowingSerializer(serializers.ModelSerializer):
 
 
 class FollowerSerializer(serializers.ModelSerializer):
-    user = UserProfileSerializer(source="user_from", read_only=True)
+    user = ProfileSerializer(source="user_from", read_only=True)
 
     class Meta:
         model = Follows

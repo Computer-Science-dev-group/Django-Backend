@@ -5,7 +5,7 @@ from django.core.files import File
 from django.db.models import QuerySet
 from rest_framework import serializers
 
-from uia_backend.accounts.api.v1.serializers import UserProfileSerializer
+from uia_backend.accounts.api.v1.serializers import ProfileSerializer
 from uia_backend.libs.serializers import DynamicFieldsModelSerializer
 from uia_backend.messaging.models import Comment, FileModel, Like, Post
 
@@ -55,7 +55,7 @@ class PostSerializer(serializers.ModelSerializer[Post]):
         default=None,
     )
 
-    created_by = UserProfileSerializer(read_only=True)
+    created_by = ProfileSerializer(read_only=True)
 
     file_ids = serializers.PrimaryKeyRelatedField(
         source="files",
@@ -68,6 +68,7 @@ class PostSerializer(serializers.ModelSerializer[Post]):
     )
 
     files = FileModelSerializer(read_only=True, many=True, allowed_fields=["file"])
+    ws_channel_name = serializers.CharField(read_only=True, source="channel_name")
 
     class Meta:
         model = Post
@@ -86,6 +87,7 @@ class PostSerializer(serializers.ModelSerializer[Post]):
             "liked_by_user",
             "files",
             "file_ids",
+            "ws_channel_name",
         ]
 
         read_only_fields = [
@@ -100,6 +102,7 @@ class PostSerializer(serializers.ModelSerializer[Post]):
             "share_comment",
             "liked_by_user",
             "files",
+            "ws_channel_name",
         ]
 
     def validate_file_ids(self, value: list[FileModel]) -> QuerySet:
@@ -128,7 +131,7 @@ class CommentSerializer(serializers.ModelSerializer[Comment]):
         default=0, read_only=True, source="replies_count"
     )
     likes = serializers.IntegerField(default=0, read_only=True, source="likes_count")
-    created_by = UserProfileSerializer(read_only=True)
+    created_by = ProfileSerializer(read_only=True)
     liked_by_user = serializers.BooleanField(default=False, read_only=True)
     cluster = serializers.UUIDField(source="post__cluster", read_only=True)
 
@@ -195,9 +198,13 @@ class CommentSerializer(serializers.ModelSerializer[Comment]):
 
 
 class LikeSerializer(serializers.ModelSerializer[Like]):
-    created_by = UserProfileSerializer(read_only=True)
+    created_by = ProfileSerializer(read_only=True)
 
     class Meta:
         model = Like
         fields = ["id", "created_by", "created_datetime"]
         read_only_fields = ["id", "created_by", "created_datetime"]
+
+    def create(self, validated_data: dict[str, Any]) -> Like:
+        like, _ = Like.objects.get_or_create(**validated_data)
+        return like

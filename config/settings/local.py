@@ -15,6 +15,10 @@ SECRET_KEY = env(
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]
 
+MIDDLEWARE = [
+    "debug_toolbar.middleware.DebugToolbarMiddleware"
+] + MIDDLEWARE  # noqa: F405
+
 # CACHES
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#caches
@@ -35,7 +39,10 @@ EMAIL_BACKEND = env(
 # WhiteNoise
 # ------------------------------------------------------------------------------
 # http://whitenoise.evans.io/en/latest/django.html#using-whitenoise-in-development
-INSTALLED_APPS = ["whitenoise.runserver_nostatic"] + INSTALLED_APPS  # noqa F405
+INSTALLED_APPS = [
+    "whitenoise.runserver_nostatic",
+    "debug_toolbar",
+] + INSTALLED_APPS  # noqa F405
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER", default="no") == "yes":
     import socket

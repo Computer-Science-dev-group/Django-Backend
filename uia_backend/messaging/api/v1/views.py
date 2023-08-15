@@ -9,12 +9,18 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from uia_backend.cluster.models import Cluster
+from uia_backend.libs.centrifugo import CentrifugoConnector
 from uia_backend.messaging.api.v1.permission import ClusterPostPermission
 from uia_backend.messaging.api.v1.serializers import (
     CommentSerializer,
     FileModelSerializer,
     LikeSerializer,
     PostSerializer,
+)
+from uia_backend.messaging.constants import (
+    CENT_EVENT_POST_DELETED,
+    CENT_EVENT_POST_LIKE_CREATED,
+    CENT_EVENT_POST_LIKE_DELETED,
 )
 from uia_backend.messaging.models import Comment, Like, Post
 
@@ -37,7 +43,11 @@ class PostListAPIView(generics.ListCreateAPIView):
 
     def get_queryset(self) -> QuerySet[Post]:
         cluster = self.get_object()
-        return Post.objects.filter(cluster=cluster)
+        return (
+            Post.objects.select_related("created_by")
+            .prefetch_related("files", "likes", "shares")
+            .filter(cluster=cluster)
+        )
 
     def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         self.get_object()
@@ -77,48 +87,21 @@ class PostDetailsAPIView(generics.RetrieveDestroyAPIView):
 
         return post
 
-
-class PostLikeListAPIView(generics.ListCreateAPIView):
-    serializer_class = LikeSerializer
-    permission_classes = [
-        permissions.IsAuthenticated,
-        ClusterPostPermission,
-    ]
-
-    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
-    search_fields = [
-        "created_by__first_name",
-        "created_by__last_name",
-        "created_by__display_name",
-    ]
-    ordering_fields = ["created_datetime"]
-    ordering = ["-created_datetime"]
-
-    def get_object(self) -> Cluster:
-        post = get_object_or_404(
-            Post.objects.prefetch_related("cluster"),
-            id=self.kwargs["post_id"],
-            cluster_id=self.kwargs["cluster_id"],
+    def perform_destroy(self, instance: Post) -> None:
+        channels = [instance.channel_name, instance.cluster.channel_name]
+        CentrifugoConnector().broadcast_event(
+            event_name=CENT_EVENT_POST_DELETED,
+            channels=channels,
+            event_data=dict(
+                PostSerializer(context={"request": self.request}).to_representation(
+                    instance=instance
+                )
+            ),
         )
-        self.check_object_permissions(request=self.request, obj=post.cluster)
-        return post
-
-    def get_queryset(self) -> QuerySet[Like]:
-        post = self.get_object()
-        return Like.objects.filter(post=post)
-
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        self.get_object()
-        return super().create(request, *args, **kwargs)
-
-    def perform_create(self, serializer: LikeSerializer) -> None:
-        serializer.save(
-            created_by=self.request.user,
-            post_id=self.kwargs["post_id"],
-        )
+        return super().perform_destroy(instance)
 
 
-class LikeDetailAPIView(generics.RetrieveDestroyAPIView):
+class LikePostAPIView(generics.CreateAPIView, generics.DestroyAPIView):
     serializer_class = LikeSerializer
     permission_classes = [
         permissions.IsAuthenticated,
@@ -127,8 +110,17 @@ class LikeDetailAPIView(generics.RetrieveDestroyAPIView):
 
     def get_object(self) -> Like:
         like = get_object_or_404(
-            Like.objects.prefetch_related("post"),
-            id=self.kwargs["like_id"],
+            Like.objects.select_related(
+                "post",
+                "created_by",
+            ).prefetch_related(
+                "post__cluster",
+                "post__created_by",
+                "post__files",
+                "post__files",
+                "post__likes",
+                "post__shares",
+            ),
             post_id=self.kwargs["post_id"],
         )
 
@@ -141,6 +133,52 @@ class LikeDetailAPIView(generics.RetrieveDestroyAPIView):
 
         self.check_object_permissions(request=self.request, obj=like.post.cluster)
         return like
+
+    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        self.post_object = get_object_or_404(
+            Post.objects.prefetch_related("cluster", "created_by", "files"),
+            id=self.kwargs["post_id"],
+            cluster_id=self.kwargs["cluster_id"],
+        )
+        self.check_object_permissions(
+            request=self.request, obj=self.post_object.cluster
+        )
+        return super().create(request, *args, **kwargs)
+
+    def perform_create(self, serializer: LikeSerializer) -> None:
+        serializer.save(created_by=self.request.user, post_id=self.kwargs["post_id"])
+
+        # broadcast event to cluster and post channels
+        channels = [
+            self.post_object.channel_name,
+            self.post_object.cluster.channel_name,
+        ]
+        CentrifugoConnector().broadcast_event(
+            event_name=CENT_EVENT_POST_LIKE_CREATED,
+            channels=channels,
+            event_data=dict(
+                PostSerializer(context={"request": self.request}).to_representation(
+                    instance=self.post_object
+                )
+            ),
+        )
+
+    def perform_destroy(self, instance: Like) -> None:
+        post = instance.post
+        super().perform_destroy(instance)
+        post.refresh_from_db()
+
+        # broadcast event to cluster and post channels
+        channels = [post.channel_name, post.cluster.channel_name]
+        CentrifugoConnector().broadcast_event(
+            event_name=CENT_EVENT_POST_LIKE_DELETED,
+            channels=channels,
+            event_data=dict(
+                PostSerializer(context={"request": self.request}).to_representation(
+                    instance=post
+                )
+            ),
+        )
 
 
 class CommentListAPIView(generics.ListCreateAPIView):
