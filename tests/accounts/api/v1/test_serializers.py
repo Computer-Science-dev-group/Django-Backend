@@ -57,7 +57,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
                 "department": "Computer Science",
                 "year_of_graduation": "2001",
             },
-            "lable": "Test valid data",
+            "label": "Test valid data",
             "context": None,
         }
     ]
@@ -73,7 +73,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
                 "department": "Computer Science",
                 "year_of_graduation": "1901",
             },
-            "lable": "Test invalid year_of_graduation 1",
+            "label": "Test invalid year_of_graduation 1",
             "context": None,
         },
         {
@@ -88,7 +88,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
                     (timezone.now() + relativedelta(year=1)).year
                 ),
             },
-            "lable": "Test invalid year_of_graduation 2",
+            "label": "Test invalid year_of_graduation 2",
             "context": None,
         },
         {
@@ -101,7 +101,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
                 "department": "Computer Science",
                 "year_of_graduation": "2s21",
             },
-            "lable": "Test invalid year_of_graduation format 3",
+            "label": "Test invalid year_of_graduation format 3",
             "context": None,
         },
         {
@@ -114,7 +114,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
                 "department": "Computer Science",
                 "year_of_graduation": "2001",
             },
-            "lable": "Test invalid password",
+            "label": "Test invalid password",
             "context": None,
         },
     ]
@@ -142,7 +142,7 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
                 "data": {
                     "signature": signature,
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
             }
         ]
 
@@ -151,13 +151,13 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
                 "data": {
                     "signature": "asjnj-lsndjka-nsdnxswsn.dnas-mdnamsnd",
                 },
-                "lable": "Test invalid bad signature",
+                "label": "Test invalid bad signature",
             },
             {
                 "data": {
                     "signature": signer.sign_object(str(uuid.uuid4())),
                 },
-                "lable": "Invalid Email Record",
+                "label": "Invalid Email Record",
             },
         ]
 
@@ -238,7 +238,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                     "display_name": "Johnsnow",
                     "gender": "Male",
                 },
-                "lable": "Test first_name is required",
+                "label": "Test first_name is required",
                 "context": {"request": request},
             },
             {
@@ -248,7 +248,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                     "display_name": "Johnsnow",
                     "gender": "Male",
                 },
-                "lable": "Test last_name is required",
+                "label": "Test last_name is required",
                 "context": {"request": request},
             },
             {
@@ -258,7 +258,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                     "display_name": "",
                     "gender": "Male",
                 },
-                "lable": "Test display_name is required",
+                "label": "Test display_name is required",
                 "context": {"request": request},
             },
             {
@@ -268,7 +268,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                     "display_name": "Johnsnow",
                     "gender": "",
                 },
-                "lable": "Test gener is required",
+                "label": "Test gener is required",
                 "context": {"request": request},
             },
             {
@@ -278,7 +278,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                     "display_name": "Johnsnow",
                     "gender": "Stray",
                 },
-                "lable": "Test invalid gender option",
+                "label": "Test invalid gender option",
                 "context": {"request": request},
             },
         ]
@@ -295,7 +295,7 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
     VALID_DATA = [
         {
             "data": {"password": "f_g68Ata7jPqqmm"},
-            "lable": "Test valid data",
+            "label": "Test valid data",
             "context": None,
         }
     ]
@@ -303,7 +303,7 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
     INVALID_DATA = [
         {
             "data": {"password": "string"},
-            "lable": "Test invalid password lenght",
+            "label": "Test invalid password lenght",
             "context": None,
         }
     ]
@@ -334,7 +334,7 @@ class LoginSerializerTests(CustomSerializerTests):
         self.VALID_DATA = [
             {
                 "data": {"password": "12345", "email": "user@example.com"},
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": None,
             }
         ]
@@ -342,22 +342,22 @@ class LoginSerializerTests(CustomSerializerTests):
         self.INVALID_DATA = [
             {
                 "data": {"password": "12345", "email": "wrong@example.com"},
-                "lable": "Test invalid data wrong email.",
+                "label": "Test invalid data wrong email.",
                 "context": None,
             },
             {
                 "data": {"password": "xxxxxx", "email": "user@example.com"},
-                "lable": "Test invalid data wrong password.",
+                "label": "Test invalid data wrong password.",
                 "context": None,
             },
             {
                 "data": {"password": "12345", "email": "wrong@example.com"},
-                "lable": "Test invalid data wrong email.",
+                "label": "Test invalid data wrong email.",
                 "context": None,
             },
             {
                 "data": {"password": "12345", "email": "inactive@example.com"},
-                "lable": "Test invalid inactive user.",
+                "label": "Test invalid inactive user.",
                 "context": None,
             },
         ]
@@ -382,7 +382,7 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 "data": {
                     "email": active_user.email,
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": None,
             }
         ]
@@ -392,28 +392,28 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 "data": {
                     "email": "",
                 },
-                "lable": "Test empty email",
+                "label": "Test empty email",
                 "context": None,
             },
             {
                 "data": {
                     "email": "invalid_email_address",
                 },
-                "lable": "Test invalid email address",
+                "label": "Test invalid email address",
                 "context": None,
             },
             {
                 "data": {
                     "email": inactive_user.email,
                 },
-                "lable": "Test inactive email address",
+                "label": "Test inactive email address",
                 "context": None,
             },
             {
                 "data": {
                     "email": "some_non_existent_user@example.com",
                 },
-                "lable": "Test non-existent email address",
+                "label": "Test non-existent email address",
                 "context": None,
             },
         ]
@@ -460,7 +460,7 @@ class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
                     "otp": str(otp),
                     "email": user.email,
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
             }
         ]
 
@@ -470,21 +470,21 @@ class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
                     "otp": "000000",
                     "email": user.email,
                 },
-                "lable": "Test invalid otp signature",
+                "label": "Test invalid otp signature",
             },
             {
                 "data": {
                     "otp": "111111",
                     "email": user.email,
                 },
-                "lable": "Non pending otp",
+                "label": "Non pending otp",
             },
             {
                 "data": {
                     "otp": str(otp),
                     "email": "invalid_email@example.com",
                 },
-                "lable": "Test invalid email",
+                "label": "Test invalid email",
             },
         ]
 
@@ -531,7 +531,7 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "email": user.email,
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
             }
         ]
 
@@ -542,7 +542,7 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "email": user.email,
                     "password_change_key": non_verified_password_reset_record.generate_signed_identifier(),
                 },
-                "lable": "Non verified otp signature",
+                "label": "Non verified otp signature",
             },
             {
                 "data": {
@@ -550,7 +550,7 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "email": "invalid_email@example.com",
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
-                "lable": "Invalid email address.",
+                "label": "Invalid email address.",
             },
             {
                 "data": {
@@ -558,7 +558,7 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "email": user.email,
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
-                "lable": "Invalid password.",
+                "label": "Invalid password.",
             },
         ]
 
@@ -589,10 +589,6 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
             is_active=False, email="email3@example.com"
         )
 
-        unverified_user = UserModelFactory.create(
-            is_verified=False, email="email4@example.com"
-        )
-
         request = MagicMock()
         request.user = authenticated_user
 
@@ -603,12 +599,12 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                     "status": 0,
                     "sent_to": str(invited_user.id),
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": {"request": request},
             },
             {
                 "data": {"sent_to": str(invited_user.id)},
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": {"request": request},
             },
         ]
@@ -619,7 +615,7 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                     "status": 5,
                     "sent_to": str(invited_user.id),
                 },
-                "lable": "Test invalid status",
+                "label": "Test invalid status",
                 "context": {"request": request},
             },
             {
@@ -627,7 +623,7 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                     "status": 0,
                     "sent_to": str(uuid.uuid4()),
                 },
-                "lable": "Test invalid user",
+                "label": "Test invalid user",
                 "context": {"request": request},
             },
             {
@@ -635,7 +631,7 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                     "status": 0,
                     "sent_to": str(authenticated_user.id),
                 },
-                "lable": "Test invalid user. Can not send invitation to yourself.",
+                "label": "Test invalid user. Can not send invitation to yourself.",
                 "context": {"request": request},
             },
             {
@@ -643,15 +639,7 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                     "status": 0,
                     "sent_to": str(inactive_user.id),
                 },
-                "lable": "Test invalid user. Can invite inactive user.",
-                "context": {"request": request},
-            },
-            {
-                "data": {
-                    "status": 0,
-                    "sent_to": str(unverified_user.id),
-                },
-                "lable": "Test invalid user. Can invite unverifeid user.",
+                "label": "Test invalid user. Can invite inactive user.",
                 "context": {"request": request},
             },
         ]
@@ -670,6 +658,7 @@ class UserFriendShipSettingsSerializerTests(CustomSerializerTests):
         "is_blocked",
         "created_datetime",
         "updated_datetime",
+        "friendship_id",
     ]
 
     VALID_DATA = [
@@ -677,13 +666,13 @@ class UserFriendShipSettingsSerializerTests(CustomSerializerTests):
             "data": {
                 "is_blocked": True,
             },
-            "lable": "Test valid data",
+            "label": "Test valid data",
         },
         {
             "data": {
                 "is_blocked": False,
             },
-            "lable": "Test valid data",
+            "label": "Test valid data",
         },
     ]
 
@@ -706,13 +695,13 @@ class FollowingSerializerTests(CustomSerializerTests):
         self.VALID_DATA = [
             {
                 "data": {"user_id": user.id},
-                "lable": "Test valid data.",
+                "label": "Test valid data.",
                 "context": {"request": request},
             }
         ]
 
         self.INVALID_DATA = [
-            {"data": {"user_id": uuid.uuid4()}, "lable": "Test invalid user_id data."}
+            {"data": {"user_id": uuid.uuid4()}, "label": "Test invalid user_id data."}
         ]
 
 

@@ -84,7 +84,7 @@ class CustomSerializerTests(TestCase):
             self.assertEqual(
                 serializer.is_valid(),
                 True,
-                msg=f'{valid_data.get("lable")} \n\n{serializer.errors}',
+                msg=f'{valid_data.get("label")} \n\n{serializer.errors}',
             )
 
     def test_invalid_data(
@@ -102,7 +102,7 @@ class CustomSerializerTests(TestCase):
             self.assertEqual(
                 serializer.is_valid(),
                 False,
-                msg=invalid_data["lable"],
+                msg=invalid_data["label"],
             )
 
 

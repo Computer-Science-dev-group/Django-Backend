@@ -13,16 +13,20 @@ from uia_backend.libs.centrifugo import CentrifugoConnector
 from uia_backend.messaging.api.v1.permission import ClusterPostPermission
 from uia_backend.messaging.api.v1.serializers import (
     CommentSerializer,
+    CreateDMSerializer,
     FileModelSerializer,
     LikeSerializer,
     PostSerializer,
+    UpdateDMSerializer,
 )
 from uia_backend.messaging.constants import (
+    CENT_EVENT_DM_CREATED,
+    CENT_EVENT_DM_EDITED,
     CENT_EVENT_POST_DELETED,
     CENT_EVENT_POST_LIKE_CREATED,
     CENT_EVENT_POST_LIKE_DELETED,
 )
-from uia_backend.messaging.models import Comment, Like, Post
+from uia_backend.messaging.models import DM, Comment, Like, Post
 
 
 class PostListAPIView(generics.ListCreateAPIView):
@@ -89,16 +93,18 @@ class PostDetailsAPIView(generics.RetrieveDestroyAPIView):
 
     def perform_destroy(self, instance: Post) -> None:
         channels = [instance.channel_name, instance.cluster.channel_name]
-        CentrifugoConnector().broadcast_event(
-            event_name=CENT_EVENT_POST_DELETED,
-            channels=channels,
-            event_data=dict(
+        data_to_broadcast = {
+            "event_name": CENT_EVENT_POST_DELETED,
+            "channels": channels,
+            "event_data": dict(
                 PostSerializer(context={"request": self.request}).to_representation(
                     instance=instance
                 )
             ),
-        )
-        return super().perform_destroy(instance)
+        }
+
+        super().perform_destroy(instance)
+        CentrifugoConnector().broadcast_event(**data_to_broadcast)
 
 
 class LikePostAPIView(generics.CreateAPIView, generics.DestroyAPIView):
@@ -283,3 +289,89 @@ class FileUploadAPIView(generics.CreateAPIView):
 
     def perform_create(self, serializer) -> None:
         serializer.save(created_by=self.request.user)
+
+
+class DMCreateAPIView(generics.CreateAPIView):
+    """Create DM."""
+
+    serializer_class = CreateDMSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer: CreateDMSerializer) -> None:
+        dm = serializer.save(created_by=self.request.user)
+
+        # send dm creation event to centrifugo
+        channels = [user.channel_name for user in dm.friendship.users.all()]
+        CentrifugoConnector().broadcast_event(
+            event_name=CENT_EVENT_DM_CREATED,
+            channels=channels,
+            event_data=serializer.data,
+        )
+
+
+class ListDMAPIView(generics.ListAPIView):
+    """List DMs."""
+
+    serializer_class = UpdateDMSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    filter_backends = [filters.OrderingFilter, filters.SearchFilter]
+    ordering_fields = ["created_datetime"]
+    search_fields = ["content"]
+    ordering = ["-created_datetime"]
+
+    def get_queryset(self) -> QuerySet[DM]:
+        return DM.objects.prefetch_related("created_by", "friendship", "files").filter(
+            friendship_id=self.kwargs["friendship_id"],
+            friendship__users__id=self.request.user.id,
+        )
+
+
+class RetrieveUpdateDMAPIView(generics.RetrieveUpdateDestroyAPIView):
+    """Retrieve update or delete DM."""
+
+    serializer_class = UpdateDMSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "put", "delete"]
+
+    def get_object(self) -> DM:
+        query = {
+            "id": self.kwargs["message_id"],
+            "friendship_id": self.kwargs["friendship_id"],
+            "friendship__users__id": self.request.user.id,
+        }
+
+        # ensure that only dm creator can delete or update dm.
+        if self.request.method.upper() in ["DELETE", "PUT"]:
+            query["created_by"] = self.request.user
+
+        return get_object_or_404(
+            DM.objects.prefetch_related("created_by", "friendship", "files"), **query
+        )
+
+    def perform_update(self, serializer: UpdateDMSerializer) -> None:
+        dm = serializer.save(edited=True)
+        # send dm creation event to centrifugo
+        channels = [user.channel_name for user in dm.friendship.users.all()]
+        CentrifugoConnector().broadcast_event(
+            event_name=CENT_EVENT_DM_EDITED,
+            channels=channels,
+            event_data=serializer.data,
+        )
+
+    def perform_destroy(self, instance: DM) -> None:
+        channels = [user.channel_name for user in instance.friendship.users.all()]
+        data_to_broadcast = {
+            "event_name": CENT_EVENT_DM_EDITED,
+            "channels": channels,
+            "event_data": dict(
+                UpdateDMSerializer(instance=instance).to_representation(
+                    instance=instance
+                )
+            ),
+        }
+
+        super().perform_destroy(instance)
+
+        # send dm deletion event to centrifugo
+        CentrifugoConnector().broadcast_event(**data_to_broadcast)

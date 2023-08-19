@@ -506,7 +506,7 @@ class ResetPasswordSerializer(serializers.ModelSerializer):
 class FriendshipInvitationSerializer(serializers.ModelSerializer):
     sent_to = serializers.PrimaryKeyRelatedField(
         source="user",
-        queryset=CustomUser.objects.filter(is_active=True, is_verified=True),
+        queryset=CustomUser.objects.filter(is_active=True),
     )
 
     class Meta:
@@ -618,16 +618,25 @@ class FriendshipInvitationSerializer(serializers.ModelSerializer):
 
 
 class UserFriendShipSettingsSerializer(serializers.ModelSerializer):
-    users = serializers.ListField(
-        child=serializers.PrimaryKeyRelatedField(read_only=True),
-        source="friendship__users",
-        read_only=True,
-    )
+    users = ProfileSerializer(source="friendship.users", read_only=True, many=True)
 
     class Meta:
         model = UserFriendShipSettings
-        fields = ["id", "is_blocked", "users", "created_datetime", "updated_datetime"]
-        read_only_fields = ["id", "users", "created_datetime", "updated_datetime"]
+        fields = [
+            "id",
+            "is_blocked",
+            "users",
+            "created_datetime",
+            "updated_datetime",
+            "friendship_id",
+        ]
+        read_only_fields = [
+            "id",
+            "users",
+            "created_datetime",
+            "updated_datetime",
+            "friendship_id",
+        ]
 
 
 class FollowingSerializer(serializers.ModelSerializer):
