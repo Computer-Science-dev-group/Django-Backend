@@ -19,12 +19,12 @@ class ClusterSerializerTests(CustomSerializerTests):
     VALID_DATA = [
         {
             "data": {"title": "string", "description": "string", "icon": None},
-            "lable": "Test valid data icon is Null",
+            "label": "Test valid data icon is Null",
             "context": None,
         },
         {
             "data": {"title": "string", "description": "", "icon": None},
-            "lable": "Test valid data icon is Null and description is empty",
+            "label": "Test valid data icon is Null and description is empty",
             "context": None,
         },
         {
@@ -33,7 +33,7 @@ class ClusterSerializerTests(CustomSerializerTests):
                 "description": "AYayayayaya",
                 "icon": get_test_image_file(),
             },
-            "lable": "Test valid data icon has file",
+            "label": "Test valid data icon has file",
             "context": None,
         },
     ]
@@ -45,7 +45,7 @@ class ClusterSerializerTests(CustomSerializerTests):
                 "description": "Naaana",
                 "icon": get_test_image_file(),
             },
-            "lable": "Test Invalid data empty title.",
+            "label": "Test Invalid data empty title.",
             "context": None,
         },
     ]
@@ -76,12 +76,12 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                     "duration": 10,
                     "user": str(invited_user.id),
                 },
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": {"request": request},
             },
             {
                 "data": {"duration": 1, "user": str(invited_user.id)},
-                "lable": "Test valid data",
+                "label": "Test valid data",
                 "context": {"request": request},
             },
         ]
@@ -93,7 +93,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                     "duration": 10,
                     "user": str(invited_user.id),
                 },
-                "lable": "Test invalid status",
+                "label": "Test invalid status",
                 "context": {"request": request},
             },
             {
@@ -102,7 +102,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                     "duration": 0,
                     "user": str(invited_user.id),
                 },
-                "lable": "Test invalid duration",
+                "label": "Test invalid duration",
                 "context": {"request": request},
             },
             {
@@ -111,7 +111,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                     "duration": 10,
                     "user": str(uuid.uuid4()),
                 },
-                "lable": "Test invalid user",
+                "label": "Test invalid user",
                 "context": {"request": request},
             },
             {
@@ -120,7 +120,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                     "duration": 10,
                     "user": str(authenticated_user.id),
                 },
-                "lable": "Test invalid user. Can not send invitation to yourself.",
+                "label": "Test invalid user. Can not send invitation to yourself.",
                 "context": {"request": request},
             },
         ]

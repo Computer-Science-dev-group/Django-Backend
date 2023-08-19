@@ -1,4 +1,5 @@
 from typing import Any
+from uuid import UUID
 
 from django.conf import settings
 from django.core.files import File
@@ -6,8 +7,9 @@ from django.db.models import QuerySet
 from rest_framework import serializers
 
 from uia_backend.accounts.api.v1.serializers import ProfileSerializer
+from uia_backend.accounts.models import FriendShip
 from uia_backend.libs.serializers import DynamicFieldsModelSerializer
-from uia_backend.messaging.models import Comment, FileModel, Like, Post
+from uia_backend.messaging.models import DM, Comment, FileModel, Like, Post
 
 
 class FileModelSerializer(DynamicFieldsModelSerializer[FileModel]):
@@ -63,6 +65,7 @@ class PostSerializer(serializers.ModelSerializer[Post]):
         queryset=FileModel.objects.filter(
             post__isnull=True,
             comment__isnull=True,
+            dm__isnull=True,
         ),
         write_only=True,
     )
@@ -141,6 +144,7 @@ class CommentSerializer(serializers.ModelSerializer[Comment]):
         queryset=FileModel.objects.filter(
             post__isnull=True,
             comment__isnull=True,
+            dm__isnull=True,
         ),
         write_only=True,
     )
@@ -208,3 +212,97 @@ class LikeSerializer(serializers.ModelSerializer[Like]):
     def create(self, validated_data: dict[str, Any]) -> Like:
         like, _ = Like.objects.get_or_create(**validated_data)
         return like
+
+
+class CreateDMSerializer(serializers.ModelSerializer[DM]):
+    created_by = ProfileSerializer(read_only=True)
+
+    file_ids = serializers.PrimaryKeyRelatedField(
+        source="files",
+        many=True,
+        queryset=FileModel.objects.filter(
+            post__isnull=True,
+            comment__isnull=True,
+            dm__isnull=True,
+        ),
+        write_only=True,
+    )
+
+    files = FileModelSerializer(read_only=True, many=True, allowed_fields=["file"])
+    friendship_id = serializers.UUIDField(write_only=True, source="friendship")
+
+    class Meta:
+        model = DM
+        fields = [
+            "id",
+            "created_by",
+            "file_ids",
+            "files",
+            "replying",
+            "friendship",
+            "content",
+            "created_datetime",
+            "updated_datetime",
+            "edited",
+            "friendship_id",
+        ]
+
+        read_only_fields = [
+            "id",
+            "created_by",
+            "files",
+            "friendship",
+            "created_datetime",
+            "updated_datetime",
+            "edited",
+        ]
+
+    def validate_friendship_id(self, value: UUID) -> FriendShip:
+        """Validate friendship_id."""
+        user = self.context["request"].user
+
+        try:
+            friendship = user.friendship_set.get(id=value)
+        except FriendShip.DoesNotExist as error:
+            raise serializers.ValidationError(
+                "Friendship record does not exists."
+            ) from error
+
+        return friendship
+
+    def update(self, instance: DM, validated_data: dict[str, any]) -> None:
+        """Overide method."""
+
+
+class UpdateDMSerializer(serializers.ModelSerializer[DM]):
+    created_by = ProfileSerializer(read_only=True)
+    files = FileModelSerializer(read_only=True, many=True, allowed_fields=["file"])
+    content = serializers.CharField(required=True, allow_blank=False)
+
+    class Meta:
+        model = DM
+        fields = [
+            "id",
+            "created_by",
+            "files",
+            "replying",
+            "friendship",
+            "created_datetime",
+            "updated_datetime",
+            "edited",
+            "content",
+        ]
+
+        read_only_fields = [
+            "id",
+            "created_by",
+            "files",
+            "replying",
+            "friendship",
+            "created_datetime",
+            "updated_datetime",
+            "edited",
+        ]
+
+    def create(self, validated_data: dict[str, Any]) -> None:
+        """Overide method."""

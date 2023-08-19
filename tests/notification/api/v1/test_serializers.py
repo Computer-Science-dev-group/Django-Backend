@@ -23,7 +23,7 @@ class NotificationSerializerTests(CustomSerializerTests):
     VALID_DATA = [
         {
             "data": {"unread": False},
-            "lable": "Test valid data",
+            "label": "Test valid data",
             "context": None,
         }
     ]

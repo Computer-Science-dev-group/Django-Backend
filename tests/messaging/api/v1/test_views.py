@@ -1,3 +1,4 @@
+import uuid
 from unittest.mock import MagicMock, patch
 
 from django.core.files.uploadedfile import SimpleUploadedFile, UploadedFile
@@ -5,10 +6,16 @@ from django.urls import reverse
 from rest_framework import serializers
 from rest_framework.test import APITestCase
 
-from tests.accounts.test_models import UserModelFactory
+from tests.accounts.test_models import (
+    FriendShipFactory,
+    FriendShipInvitationFactory,
+    UserFriendShipSettingsFactory,
+    UserModelFactory,
+)
 from tests.cluster.test_models import ClusterFactory, ClusterMembershipFactory
 from tests.messaging.test_models import (
     CommentFactory,
+    DMFactory,
     FileModelFactory,
     LikeFactory,
     PostFactory,
@@ -25,7 +32,7 @@ from uia_backend.messaging.constants import (
     CENT_EVENT_POST_LIKE_CREATED,
     CENT_EVENT_POST_LIKE_DELETED,
 )
-from uia_backend.messaging.models import Comment, FileModel, Like, Post
+from uia_backend.messaging.models import DM, Comment, FileModel, Like, Post
 
 
 class PostListAPIViewTests(APITestCase):
@@ -1117,3 +1124,480 @@ class FileUploadAPIViewTests(APITestCase):
                 },
             },
         )
+
+
+class DMCreateAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create()
+        self.user = UserModelFactory.create(email="miscope@example.com")
+        self.url = reverse("messaging_api_v1:create_dm")
+        self.friendship_record = FriendShipFactory.create()
+        UserFriendShipSettingsFactory.create(
+            user=self.authenticated_user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.authenticated_user,
+                created_by=self.user,
+            ),
+        )
+        UserFriendShipSettingsFactory.create(
+            user=self.user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.user,
+                created_by=self.authenticated_user,
+            ),
+        )
+
+    def test_create_dm_fails_when_user_is_authenticated(self):
+        """Create DM fails for unathenticated user."""
+
+        data = {
+            "file_ids": [],
+            "replying": None,
+            "content": "Donate the",
+            "friendship_id": str(self.friendship_record.id),
+        }
+
+        response = self.client.post(data=data, path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+        self.assertEqual(DM.objects.all().count(), 0)
+
+    def test_create_dm_fails_for_invalid_frienship_id(self):
+        """Create DM fails for invalid friendhip id."""
+
+        self.client.force_authenticate(self.authenticated_user)
+
+        # test for non-existing uuid
+        data = {
+            "file_ids": [],
+            "replying": None,
+            "content": "National",
+            "friendship_id": str(uuid.uuid4()),
+        }
+
+        response = self.client.post(data=data, path=self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "friendship_id": ["Friendship record does not exists."],
+                },
+            },
+        )
+
+        self.assertEqual(DM.objects.all().count(), 0)
+
+        # test for frienship that is not associated to users
+        data = {
+            "file_ids": [],
+            "replying": None,
+            "content": "MoiMoi",
+            "friendship_id": str(FriendShipFactory.create().id),
+        }
+
+        response = self.client.post(data=data, path=self.url)
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 400,
+                "data": {
+                    "friendship_id": ["Friendship record does not exists."],
+                },
+            },
+        )
+
+        self.assertEqual(DM.objects.all().count(), 0)
+
+    def test_create_dm_successfully(self):
+        """Create dm successfully create message and send centrifugo events."""
+
+        self.client.force_authenticate(self.authenticated_user)
+
+        data = {
+            "file_ids": [],
+            "replying": None,
+            "content": "Share the national cake",
+            "friendship_id": str(self.friendship_record.id),
+        }
+
+        response = self.client.post(data=data, path=self.url)
+
+        self.assertEqual(response.status_code, 201)
+
+        dm_query = DM.objects.filter(created_by=self.authenticated_user)
+        self.assertEqual(dm_query.count(), 1)
+        dm = dm_query.first()
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 201,
+                "data": {
+                    "id": str(dm.id),
+                    "replying": None,
+                    "created_by": dict(
+                        ProfileSerializer().to_representation(
+                            instance=self.authenticated_user
+                        )
+                    ),
+                    "friendship": str(self.friendship_record.id),
+                    "content": "Share the national cake",
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        value=dm.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        value=dm.updated_datetime
+                    ),
+                    "edited": False,
+                    "files": [],
+                },
+            },
+        )
+
+
+class ListDMAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create()
+        self.user = UserModelFactory.create(email="miscope@example.com")
+        self.friendship_record = FriendShipFactory.create()
+        self.url = reverse("messaging_api_v1:list_dm", args=[self.friendship_record.id])
+
+        UserFriendShipSettingsFactory.create(
+            user=self.authenticated_user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.authenticated_user,
+                created_by=self.user,
+            ),
+        )
+        UserFriendShipSettingsFactory.create(
+            user=self.user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.user,
+                created_by=self.authenticated_user,
+            ),
+        )
+
+    def test_list_dms_fails_when_user_is_authenticated(self):
+        """List DMs fails for unathenticated user."""
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_list_dms_successfully(self):
+        """List dms returns dm sent though friendship connection"""
+
+        self.client.force_authenticate(self.authenticated_user)
+
+        # dms sent by user though friendship  (Should be listed)
+        dm_created_by_user = DMFactory.create_batch(
+            created_by=self.authenticated_user,
+            friendship=self.friendship_record,
+            size=5,
+        )
+
+        # dms sent to user though friendship (Should be listed)
+        dms_sent_to_user = DMFactory.create_batch(
+            created_by=self.user,
+            friendship=self.friendship_record,
+            size=5,
+        )
+
+        # dms sent by user though friendship (Should not be listed)
+        dms_sent_by_user_through_another_friendship = DMFactory.create_batch(
+            created_by=self.authenticated_user,
+            friendship=FriendShipFactory.create(),
+            size=5,
+        )
+
+        # dms sent to user though friendship (Should not be listed)
+        dms_sent_to_user_through_another_friendship = DMFactory.create_batch(
+            created_by=self.user,
+            friendship=FriendShipFactory.create(),
+            size=5,
+        )
+
+        response = self.client.get(path=self.url)
+        self.maxDiff = None
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "next": None,
+                "previous": None,
+                "count": 10,
+                "data": [
+                    {
+                        "id": str(dm.id),
+                        "replying": dm.replying,
+                        "created_by": dict(
+                            ProfileSerializer().to_representation(
+                                instance=dm.created_by
+                            )
+                        ),
+                        "friendship": str(dm.friendship_id),
+                        "content": dm.content,
+                        "created_datetime": serializers.DateTimeField().to_representation(
+                            value=dm.created_datetime
+                        ),
+                        "updated_datetime": serializers.DateTimeField().to_representation(
+                            value=dm.updated_datetime
+                        ),
+                        "edited": dm.edited,
+                        "files": [],
+                    }
+                    for dm in DM.objects.filter(
+                        id__in=[dm.id for dm in dm_created_by_user + dms_sent_to_user]
+                    )
+                    .exclude(
+                        id__in=[
+                            dm.id
+                            for dm in dms_sent_by_user_through_another_friendship
+                            + dms_sent_to_user_through_another_friendship
+                        ]
+                    )
+                    .order_by("-created_datetime")
+                ],
+            },
+        )
+
+
+class RetrieveUpdateDMAPIView(APITestCase):
+    def setUp(self) -> None:
+        self.authenticated_user = UserModelFactory.create()
+        self.user = UserModelFactory.create(email="miscope@example.com")
+        self.friendship_record = FriendShipFactory.create()
+
+        UserFriendShipSettingsFactory.create(
+            user=self.authenticated_user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.authenticated_user,
+                created_by=self.user,
+            ),
+        )
+        UserFriendShipSettingsFactory.create(
+            user=self.user,
+            friendship=self.friendship_record,
+            invitation=FriendShipInvitationFactory.create(
+                user=self.user,
+                created_by=self.authenticated_user,
+            ),
+        )
+
+        self.dm = DMFactory.create(
+            created_by=self.authenticated_user,
+            friendship=self.friendship_record,
+            content="Edited message",
+        )
+
+        self.url = reverse(
+            "messaging_api_v1:dm_details", args=[self.friendship_record.id, self.dm.id]
+        )
+
+    def test_retrieve_dm_fails_when_user_is_unauthenticated(self):
+        """Retrieve DM fails for unauthenticated user."""
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_update_dm_fails_when_user_is_unauthenticated(self):
+        """Update DM fails for unauthenticated user."""
+
+        data = {"content": "Edited message"}
+        response = self.client.put(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_delete_dm_fails_when_user_is_unauthenticated(self):
+        """Delete DM fails for unauthenticated user."""
+
+        response = self.client.delete(path=self.url)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_update_fails_if_user_is_not_dm_creator(self):
+        """Update fails if user is not DM creator."""
+
+        self.client.force_authenticate(self.user)
+        data = {"content": "Domine libra nos"}
+        response = self.client.put(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 404,
+                "data": {"detail": "Not found."},
+            },
+        )
+
+        self.dm.refresh_from_db()
+        self.assertNotEqual(self.dm.content, "Domine libra nos")
+
+    def test_delete_fails_if_user_is_not_dm_creator(self):
+        """Delete fails if user is not DM creator."""
+
+        self.client.force_authenticate(self.user)
+        data = {"content": "Domine libra nos"}
+        response = self.client.put(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 404,
+                "data": {"detail": "Not found."},
+            },
+        )
+
+        self.dm.refresh_from_db()
+        self.assertIsNotNone(self.dm)
+
+    def test_retrieve_dm_successfully(self):
+        """Retrieve DM returns dm data."""
+
+        self.client.force_authenticate(self.authenticated_user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.dm.id),
+                    "replying": None,
+                    "created_by": dict(
+                        ProfileSerializer().to_representation(
+                            instance=self.dm.created_by
+                        )
+                    ),
+                    "friendship": str(self.dm.friendship_id),
+                    "content": self.dm.content,
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        value=self.dm.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        value=self.dm.updated_datetime
+                    ),
+                    "edited": False,
+                    "files": [],
+                },
+            },
+        )
+
+    def test_update_dm_successfully(self):
+        """Update DM updates dm content, sets edited to true and sends centrifugo event."""
+
+        self.client.force_authenticate(self.authenticated_user)
+
+        data = {"content": "Domine libra nos"}
+        with patch(
+            "uia_backend.libs.centrifugo.CentrifugoConnector.broadcast_event"
+        ) as mock_publish_centrifugo_event:
+            response = self.client.put(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.dm.refresh_from_db()
+        self.assertEqual(self.dm.content, "Domine libra nos")
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.dm.id),
+                    "replying": None,
+                    "created_by": dict(
+                        ProfileSerializer().to_representation(
+                            instance=self.dm.created_by
+                        )
+                    ),
+                    "friendship": str(self.dm.friendship_id),
+                    "content": "Domine libra nos",
+                    "created_datetime": serializers.DateTimeField().to_representation(
+                        value=self.dm.created_datetime
+                    ),
+                    "updated_datetime": serializers.DateTimeField().to_representation(
+                        value=self.dm.updated_datetime
+                    ),
+                    "edited": True,
+                    "files": [],
+                },
+            },
+        )
+
+        mock_publish_centrifugo_event.assert_called_once()
+
+    def test_delete_dm_successfully(self):
+        """Delete dm removes record from db and sends centrifugo event."""
+
+        self.client.force_authenticate(self.authenticated_user)
+        with patch(
+            "uia_backend.libs.centrifugo.CentrifugoConnector.broadcast_event"
+        ) as mock_publish_centrifugo_event:
+            response = self.client.delete(path=self.url)
+
+        self.assertEqual(response.status_code, 204)
+        self.assertEqual(DM.objects.count(), 0)
+        self.assertEqual(response.data, None)
+        mock_publish_centrifugo_event.assert_called_once()

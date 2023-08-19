@@ -6,6 +6,7 @@ from factory.django import DjangoModelFactory
 from tests.accounts.test_models import UserModelFactory
 from tests.cluster.test_models import ClusterFactory
 from uia_backend.messaging.models import (
+    DM,
     Comment,
     FileModel,
     Like,
@@ -45,6 +46,11 @@ class ShareFactory(DjangoModelFactory):
 class LikeFactory(DjangoModelFactory):
     class Meta:
         model = Like
+
+
+class DMFactory(DjangoModelFactory):
+    class Meta:
+        model = DM
 
 
 class LikeTests(TestCase):

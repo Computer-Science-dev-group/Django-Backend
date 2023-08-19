@@ -2,6 +2,40 @@
 # ------------------------------------------------------------------------------
 USE_DOCKER=yes
 IPYTHONDIR=/app/.ipython
+
+
+# General
+# ------------------------------------------------------------------------------
+# DJANGO_READ_DOT_ENV_FILE=True
+DJANGO_SETTINGS_MODULE=config.settings.local
+DJANGO_SECRET_KEY='GGNxoQNyy3ve5v4OcC0TNEZm0xTFRSnCx1BiInv3QfSiiDu8uTtEAfmvwBp0rgFw'
+DJANGO_ADMIN_URL=''
+DJANGO_ALLOWED_HOSTS=''
+DJANGO_DEFAULT_FROM_EMAIL=''
+CONN_MAX_AGE=''
+
+# Security
+# ------------------------------------------------------------------------------
+# TIP: better off using DNS, however, redirect is OK too
+DJANGO_SECURE_SSL_REDIRECT=''
+
+
+# AWS
+# ------------------------------------------------------------------------------
+DJANGO_AWS_ACCESS_KEY_ID=''
+DJANGO_AWS_SECRET_ACCESS_KEY=''
+DJANGO_AWS_STORAGE_BUCKET_NAME=''
+DJANGO_AWS_S3_REGION_NAME=''
+
+
+# Gunicorn
+# ------------------------------------------------------------------------------
+WEB_CONCURRENCY=1
+
+# Sentry
+# ------------------------------------------------------------------------------
+SENTRY_DSN=''
+
 # Redis
 # ------------------------------------------------------------------------------
 REDIS_URL=redis://redis:6379/0
@@ -12,3 +46,13 @@ REDIS_URL=redis://redis:6379/0
 # Flower
 CELERY_FLOWER_USER=debug
 CELERY_FLOWER_PASSWORD=debug
+
+
+# Email
+# ------------------------------------------------------------------------------
+SENDINBLUE_API_KEY=''
+SENDGRID_API_KEY=''
+ANYMAIL_WEBHOOK_SECRET=''
+
+# Encryption
+FIELD_ENCRYPTION_KEY='OZqvNHjw2V4J58N8CqYk9KoPcRfG5jVYLdqbQJnu7pI='

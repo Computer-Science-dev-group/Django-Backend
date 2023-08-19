@@ -75,6 +75,7 @@ THIRD_PARTY_APPS = [
     "guardian",
     "notifications",
     "instant",
+    "encrypted_model_fields",
 ]
 
 LOCAL_APPS = [
@@ -368,3 +369,8 @@ CENTRIFUGO_HOST = env("CENTRIFUGO_HOST", default="")
 CENTRIFUGO_PORT = env("CENTRIFUGO_PORT", default="")
 CENTRIFUGO_API_KEY = env("CENTRIFUGO_API_KEY", default="")
 CENTRIFUGO_TOKEN_TTL = 24 * 60 * 60  # 24 hours
+
+# encrypted_model_fields
+FIELD_ENCRYPTION_KEY = env(
+    "FIELD_ENCRYPTION_KEY", default="OZqvNHjw2V4J58N8CqYk9KoPcRfG5jVYLdqbQJnu7pI="
+)

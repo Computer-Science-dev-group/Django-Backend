@@ -5,8 +5,9 @@ from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import Q
 from django.utils import timezone
+from encrypted_model_fields.fields import EncryptedTextField
 
-from uia_backend.accounts.models import CustomUser
+from uia_backend.accounts.models import CustomUser, FriendShip
 from uia_backend.cluster.models import Cluster
 from uia_backend.libs.base_models import BaseAbstractModel
 
@@ -57,7 +58,10 @@ class FileModel(BaseAbstractModel):
         "messaging.Comment", on_delete=models.CASCADE, related_name="files", null=True
     )
     post = models.ForeignKey(
-        "messaging.POst", on_delete=models.CASCADE, related_name="files", null=True
+        "messaging.Post", on_delete=models.CASCADE, related_name="files", null=True
+    )
+    dm = models.ForeignKey(
+        "messaging.DM", on_delete=models.CASCADE, related_name="files", null=True
     )
 
     created_by = models.ForeignKey(
@@ -71,11 +75,28 @@ class FileModel(BaseAbstractModel):
         constraints = [
             models.CheckConstraint(
                 check=(
-                    (Q(comment__isnull=True) & Q(post__isnull=False))
-                    | (Q(comment__isnull=False) & Q(post__isnull=True))
-                    | (Q(comment__isnull=True) & Q(post__isnull=True))
+                    (
+                        Q(comment__isnull=True)
+                        & Q(post__isnull=False)
+                        & Q(dm__isnull=True)
+                    )
+                    | (
+                        Q(comment__isnull=False)
+                        & Q(post__isnull=True)
+                        & Q(dm__isnull=True)
+                    )
+                    | (
+                        Q(comment__isnull=True)
+                        & Q(post__isnull=True)
+                        & Q(dm__isnull=False)
+                    )
+                    | (
+                        Q(comment__isnull=True)
+                        & Q(post__isnull=True)
+                        & Q(dm__isnull=True)
+                    )
                 ),
-                name="%(app_label)s_%(class)s Must set one of comment or post.",
+                name="%(app_label)s_%(class)s Must set one of comment, post, or dm.",
             )
         ]
 
@@ -158,3 +179,15 @@ class Share(BaseAbstractModel):
 
     def __str__(self):
         return f"User {self.created_by.email} shared post {self.shared_post.id}"
+
+
+class DM(BaseAbstractModel):
+    """Model representing a direct message between two users."""
+
+    content = EncryptedTextField(blank=True, max_length=1000, default="")
+    friendship = models.ForeignKey(FriendShip, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    replying = models.ForeignKey(
+        "messaging.DM", related_name="replies", on_delete=models.CASCADE, null=True
+    )
+    edited = models.BooleanField(default=False)

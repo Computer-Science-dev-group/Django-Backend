@@ -2,11 +2,14 @@ from django.urls import path
 
 from uia_backend.messaging.api.v1.views import (
     CommentListAPIView,
+    DMCreateAPIView,
     FileUploadAPIView,
     LikePostAPIView,
+    ListDMAPIView,
     PostDetailsAPIView,
     PostListAPIView,
     RepliesListAPIView,
+    RetrieveUpdateDMAPIView,
 )
 
 urlpatterns = [
@@ -39,5 +42,12 @@ urlpatterns = [
         "uploads/",
         FileUploadAPIView.as_view(),
         name="file_upload",
+    ),
+    path("dm/", DMCreateAPIView.as_view(), name="create_dm"),
+    path("dm/<uuid:friendship_id>/", ListDMAPIView.as_view(), name="list_dm"),
+    path(
+        "dm/<uuid:friendship_id>/<uuid:message_id>/",
+        RetrieveUpdateDMAPIView.as_view(),
+        name="dm_details",
     ),
 ]

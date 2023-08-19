@@ -35,3 +35,4 @@ freezegun==1.2.2 # https://github.com/spulec/freezegun
 django-notifications-hq==1.8.2 # https://github.com/django-notifications/django-notifications
 django_instant==4.2.0 # https://github.com/synw/django-instant
 cent==4.1.0 # https://github.com/centrifugal/pycent
+django-encrypted-model-fields==0.6.5 # https://github.com/foundertherapy/django-cryptographic-fields
