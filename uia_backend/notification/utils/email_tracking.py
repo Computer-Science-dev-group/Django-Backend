@@ -11,7 +11,7 @@ from uia_backend.notification.models import EmailMessageModel, EmailTrackingMode
 Logger = logging.getLogger()
 
 
-@receiver(tracking)
+@receiver(tracking, dispatch_uid="anymail_signale")
 def signal_receiver(sender, event: AnymailTrackingEvent, esp_name: str, **kwargs):
     """Receiver anymail signals."""
 

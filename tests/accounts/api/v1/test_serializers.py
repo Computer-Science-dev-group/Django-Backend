@@ -21,6 +21,7 @@ from uia_backend.accounts.api.v1.serializers import (
     ResetPasswordSerializer,
     RestPasswordRequestSerializer,
     UserFriendShipSettingsSerializer,
+    UserGenericSettingsSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyResetPasswordOTPSerializer,
@@ -715,3 +716,76 @@ class FollowerSerializerTests(CustomSerializerTests):
 
     VALID_DATA = []
     INVALID_DATA = []
+
+
+class UserGenericSettingsSerializerTests(CustomSerializerTests):
+    __test__ = True
+
+    serializer_class = UserGenericSettingsSerializer
+
+    REQUIRED_FIELDS = ["notification"]
+    NON_REQUIRED_FIELDS = []
+
+    VALID_DATA = [
+        {
+            "data": {
+                "notification": {
+                    "like": True,
+                    "comment": True,
+                    "follow": True,
+                    "share": True,
+                    "mention": True,
+                }
+            }
+        },
+        {
+            "data": {
+                "notification": {
+                    "like": False,
+                    "comment": True,
+                    "follow": False,
+                    "share": False,
+                    "mention": True,
+                }
+            }
+        },
+    ]
+
+    INVALID_DATA = [
+        {
+            "data": {
+                "notification": {
+                    "like": False,
+                    "comment": True,
+                    "follow": False,
+                    "share": False,
+                }
+            },
+            "label": "Missing notification field.",
+        },
+        {
+            "data": {
+                "notification": {
+                    "like": False,
+                    "comment": True,
+                    "dm": True,
+                    "follow": False,
+                    "share": False,
+                    "mention": True,
+                }
+            },
+            "label": "Extra notification field.",
+        },
+        {
+            "data": {
+                "notification": {
+                    "like": False,
+                    "comment": 21,
+                    "follow": False,
+                    "share": False,
+                    "mention": "True",
+                }
+            },
+            "label": "Invalid  data type in notification fields.",
+        },
+    ]

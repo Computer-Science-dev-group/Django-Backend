@@ -19,7 +19,9 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     PasswordResetAttempt,
     UserFriendShipSettings,
+    UserGenericSettings,
 )
+from uia_backend.accounts.tasks import setup_user_profile_task
 from uia_backend.accounts.utils import (
     generate_centrifugo_connection_token,
     generate_reset_password_otp,
@@ -90,6 +92,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             user, request=self.context["request"]
         )
         enroll_user_to_prealpha_testing_experiment(user)
+        setup_user_profile_task.delay(user_id=user.id)
         return user
 
 
@@ -679,3 +682,9 @@ class FollowerSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = ["created_datetime", "user"]
+
+
+class UserGenericSettingsSerializer(serializers.ModelSerializer[UserGenericSettings]):
+    class Meta:
+        model = UserGenericSettings
+        fields = ["notification"]

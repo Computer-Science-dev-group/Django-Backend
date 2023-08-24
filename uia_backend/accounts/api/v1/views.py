@@ -9,8 +9,6 @@ from django.db.models.query import QuerySet
 from django.db.utils import Error
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import filters, generics, permissions, status
@@ -28,6 +26,7 @@ from uia_backend.accounts.api.v1.serializers import (
     ResetPasswordSerializer,
     RestPasswordRequestSerializer,
     UserFriendShipSettingsSerializer,
+    UserGenericSettingsSerializer,
     UserProfileSerializer,
     UserRegistrationSerializer,
     VerifyResetPasswordOTPSerializer,
@@ -38,6 +37,7 @@ from uia_backend.accounts.models import (
     Follows,
     FriendShipInvitation,
     UserFriendShipSettings,
+    UserGenericSettings,
 )
 from uia_backend.cluster.constants import VIEW_CLUSTER_PERMISSION
 from uia_backend.experiments.constants import ER_001_PRE_ALPHA_USER_TESTING_TAG
@@ -308,10 +308,6 @@ class UserProfileListView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter]
     search_fields = ["first_name", "last_name", "display_name"]
 
-    @method_decorator(cache_page(settings.CACHE_DURATION))
-    def list(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().list(request, *args, **kwargs)
-
 
 class UserProfileDetailAPIView(generics.RetrieveAPIView):
     """Retrieve a users profile."""
@@ -515,3 +511,20 @@ class UserFollowingDetailAPIView(generics.DestroyAPIView):
         return get_object_or_404(
             Follows, user_from=self.request.user, user_to_id=self.kwargs["user_id"]
         )
+
+
+class UserGenericSettingsAPIView(generics.RetrieveUpdateAPIView):
+    """Retrieve/Update user settings."""
+
+    serializer_class = UserGenericSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    http_method_names = ["get", "patch"]
+
+    def get_object(self) -> UserGenericSettings:
+        if not hasattr(self.request.user, "settings"):
+            logger.error(
+                "uia_backend.accounts.api.v1.views.get_object:: User does not have UserGenericSettings record.",
+                extra={"user_id": self.request.user.id},
+            )
+            raise Http404
+        return self.request.user.settings

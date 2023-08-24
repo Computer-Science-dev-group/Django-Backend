@@ -10,6 +10,7 @@ from uia_backend.accounts.models import (
     FriendShipInvitation,
     PasswordResetAttempt,
     UserFriendShipSettings,
+    UserGenericSettings,
     user_cover_profile_upload_location,
     user_profile_upload_location,
 )
@@ -30,6 +31,49 @@ class UserModelFactory(DjangoModelFactory):
 
     class Meta:
         model = CustomUser
+
+
+class EmailVerificationFactory(DjangoModelFactory):
+    class Meta:
+        model = EmailVerification
+
+
+class PasswordResetAttemptFactory(DjangoModelFactory):
+    class Meta:
+        model = PasswordResetAttempt
+
+
+class FriendShipInvitationFactory(DjangoModelFactory):
+    class Meta:
+        model = FriendShipInvitation
+
+
+class FriendShipFactory(DjangoModelFactory):
+    class Meta:
+        model = FriendShip
+
+
+class UserFriendShipSettingsFactory(DjangoModelFactory):
+    class Meta:
+        model = UserFriendShipSettings
+
+
+class FollowsFactory(DjangoModelFactory):
+    class Meta:
+        model = Follows
+
+
+class UserGenericSettingsFactory(DjangoModelFactory):
+    notification = {
+        "like": True,
+        "comment": True,
+        "follow": True,
+        "share": True,
+        "mention": True,
+    }
+
+    class Meta:
+        model = UserGenericSettings
 
 
 class UserTests(TestCase):
@@ -79,31 +123,10 @@ class UserCoverProfileUploadLocation(TestCase):
         )
 
 
-class EmailVerificationFactory(DjangoModelFactory):
-    class Meta:
-        model = EmailVerification
+class UserGenericSettingsTests(TestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create()
 
-
-class PasswordResetAttemptFactory(DjangoModelFactory):
-    class Meta:
-        model = PasswordResetAttempt
-
-
-class FriendShipInvitationFactory(DjangoModelFactory):
-    class Meta:
-        model = FriendShipInvitation
-
-
-class FriendShipFactory(DjangoModelFactory):
-    class Meta:
-        model = FriendShip
-
-
-class UserFriendShipSettingsFactory(DjangoModelFactory):
-    class Meta:
-        model = UserFriendShipSettings
-
-
-class FollowsFactory(DjangoModelFactory):
-    class Meta:
-        model = Follows
+    def test_unicode(self):
+        settings = UserGenericSettingsFactory.create(user=self.user)
+        self.assertEqual(str(settings), f"{self.user.id}_settings")

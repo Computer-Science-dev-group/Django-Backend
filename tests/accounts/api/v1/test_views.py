@@ -20,6 +20,7 @@ from tests.accounts.test_models import (
     FriendShipInvitationFactory,
     PasswordResetAttemptFactory,
     UserFriendShipSettingsFactory,
+    UserGenericSettingsFactory,
     UserModelFactory,
 )
 from uia_backend.accounts.api.v1.serializers import (
@@ -46,8 +47,11 @@ class UserRegistrationAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.url = reverse("accounts_api_v1:user_registration")
 
+    @mock.patch("uia_backend.accounts.tasks.setup_user_profile_task.delay")
     @mock.patch("uia_backend.notification.tasks.send_template_email_task.delay")
-    def test_user_registration_valid_data_successful(self, mock_send_email_task):
+    def test_user_registration_valid_data_successful(
+        self, mock_send_email_task, mock_setup_profile_task
+    ):
         """
         Test that user registration with valid data is successful.
         """
@@ -89,6 +93,7 @@ class UserRegistrationAPIViewTests(APITestCase):
         self.assertNotEqual(user.password, user_data["password"])
         self.assertTrue(user.check_password(user_data["password"]))
         mock_send_email_task.assert_called_once()
+        mock_setup_profile_task.assert_called_once_with(user_id=user.id)
 
     def test_user_registration_email_already_exists(self):
         """Test user registration fails with code 400 if user data already exits."""
@@ -1841,3 +1846,115 @@ class UserFollowingDetailAPIViewTests(APITestCase):
                 user_from=self.authenticated_user, user_to=self.following_user_1
             ).exists()
         )
+
+
+class UserGenericSettingsAPIViewTesTs(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create()
+        self.url = reverse("accounts_api_v1:user_settings")
+
+    def test_get_fails_when_unauthenticated(self):
+        response = self.client.get(path=self.url)
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_update_fails_when_unauthenticated(self):
+        """Fails with 401 error because user is not authentiated."""
+
+        data = {
+            "notification": {
+                "like": True,
+                "comment": True,
+                "follow": True,
+                "share": True,
+                "mention": True,
+            }
+        }
+
+        response = self.client.patch(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Error",
+                "code": 401,
+                "data": {"detail": "Authentication credentials were not provided."},
+            },
+        )
+
+    def test_get_fails_when_user_settings_record_does_not_exits(self):
+        """Fails and logs failure because settings record not found."""
+
+        self.client.force_authenticate(self.user)
+
+        with self.assertLogs() as log:
+            response = self.client.get(path=self.url)
+
+        print(log.records)
+        self.assertEqual(len(log.records), 2)
+        self.assertEqual(
+            log.records[0].message,
+            "uia_backend.accounts.api.v1.views.get_object:: User does not have UserGenericSettings record.",
+        )
+        self.assertEqual(log.records[0].user_id, self.user.id)
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(
+            response.json(),
+            {"status": "Error", "code": 404, "data": {"detail": "Not found."}},
+        )
+
+    def test_get_successful(self):
+        generic_settings = UserGenericSettingsFactory.create(user=self.user)
+
+        self.client.force_authenticate(self.user)
+
+        response = self.client.get(path=self.url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {"notification": generic_settings.notification},
+            },
+        )
+
+    def test_update_successful(self):
+        generic_settings = UserGenericSettingsFactory.create(user=self.user)
+
+        self.client.force_authenticate(self.user)
+
+        data = {
+            "notification": {
+                "like": False,
+                "comment": True,
+                "follow": False,
+                "share": True,
+                "mention": False,
+            }
+        }
+        self.client.force_authenticate(self.user)
+        response = self.client.patch(path=self.url, data=data)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {"notification": data["notification"]},
+            },
+        )
+
+        generic_settings.refresh_from_db()
+        self.assertEqual(generic_settings.notification, data["notification"])

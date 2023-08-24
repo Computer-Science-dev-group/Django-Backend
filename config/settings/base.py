@@ -357,11 +357,8 @@ USER_NAMESPACE = "users"
 PUBLIC_CLUSTER_NAMESPACE = "publicchannel"
 PRIVATE_CLUSTER_NAMESPACE = "privatechannel"
 POST_NAMESPACE = "posts"
-DM_NAMESPACE = "dm"
 
-CACHE_DURATION = 3600  # in seconds
 MAX_MEDIA_UPLOAD_SIZE = 10485760  # In bytes
-
 
 # centrifugo
 CENTRIFUGO_HMAC_KEY = env("CENTRIFUGO_TOKEN_HMAC_SECRET_KEY", default="")

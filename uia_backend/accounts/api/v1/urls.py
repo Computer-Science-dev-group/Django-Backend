@@ -15,6 +15,7 @@ from uia_backend.accounts.api.v1.views import (
     UserFollowingListAPIView,
     UserFriendShipsDetailAPIView,
     UserFriendShipsListAPIView,
+    UserGenericSettingsAPIView,
     UserProfileAPIView,
     UserProfileDetailAPIView,
     UserProfileListView,
@@ -85,4 +86,5 @@ urlpatterns = [
         name="friendship_invitation_detail",
     ),
     path("me/feed/", UserFeedAPIView.as_view(), name="user_feed"),
+    path("me/settings/", UserGenericSettingsAPIView.as_view(), name="user_settings"),
 ]

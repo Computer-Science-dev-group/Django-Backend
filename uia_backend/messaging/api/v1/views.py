@@ -21,6 +21,7 @@ from uia_backend.messaging.api.v1.serializers import (
 )
 from uia_backend.messaging.constants import (
     CENT_EVENT_DM_CREATED,
+    CENT_EVENT_DM_DELETED,
     CENT_EVENT_DM_EDITED,
     CENT_EVENT_POST_DELETED,
     CENT_EVENT_POST_LIKE_CREATED,
@@ -362,7 +363,7 @@ class RetrieveUpdateDMAPIView(generics.RetrieveUpdateDestroyAPIView):
     def perform_destroy(self, instance: DM) -> None:
         channels = [user.channel_name for user in instance.friendship.users.all()]
         data_to_broadcast = {
-            "event_name": CENT_EVENT_DM_EDITED,
+            "event_name": CENT_EVENT_DM_DELETED,
             "channels": channels,
             "event_data": dict(
                 UpdateDMSerializer(instance=instance).to_representation(
