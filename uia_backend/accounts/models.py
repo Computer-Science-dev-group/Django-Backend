@@ -7,10 +7,12 @@ from django.contrib.auth.models import (
     PermissionsMixin,
 )
 from django.core import signing
+from django.core.serializers.json import DjangoJSONEncoder
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from uia_backend.libs.base_models import BaseAbstractModel
+from uia_backend.libs.validators import validate_settings_notification
 
 
 def user_profile_upload_location(instance, filename: str) -> str:
@@ -174,3 +176,16 @@ class UserFriendShipSettings(BaseAbstractModel):
         "accounts.FriendShipInvitation", on_delete=models.CASCADE
     )
     is_blocked = models.BooleanField(default=False)
+
+
+class UserGenericSettings(BaseAbstractModel):
+    user = models.OneToOneField(
+        to=CustomUser, related_name="settings", on_delete=models.CASCADE
+    )
+    notification = models.JSONField(
+        encoder=DjangoJSONEncoder,
+        validators=[validate_settings_notification],
+    )
+
+    def __str__(self) -> str:
+        return f"{self.user.id}_settings"

@@ -3,14 +3,11 @@ from typing import Any
 from django.db import transaction
 from django.db.models.query import QuerySet
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
-from django.views.decorators.cache import cache_page
 from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import filters, generics, permissions
 from rest_framework.request import Request
 from rest_framework.response import Response
 
-from config.settings.base import CACHE_DURATION
 from uia_backend.cluster.api.v1.permissions import (
     ClusterInvitationObjectPermission,
     ClusterMembersObjectPermission,
@@ -72,7 +69,6 @@ class ClusterListCreateAPIView(generics.ListCreateAPIView):
             )
         ]
     )
-    @method_decorator(cache_page(CACHE_DURATION))
     def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
         return super().get(request, *args, **kwargs)
 

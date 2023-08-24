@@ -1,7 +1,16 @@
+import uuid
+from logging import getLogger
+
 from django.utils import timezone
 
 from config.celery_app import app as CELERY_APP
-from uia_backend.accounts.models import EmailVerification, PasswordResetAttempt
+from uia_backend.accounts.models import (
+    EmailVerification,
+    PasswordResetAttempt,
+    UserGenericSettings,
+)
+
+Logger = getLogger()
 
 
 @CELERY_APP.task(name="deactivate_expired_email_verification_records")
@@ -45,3 +54,21 @@ def change_status_of_expired_password_reset_records() -> None:
         to_update.append(record)
 
     PasswordResetAttempt.objects.bulk_update(objs=to_update, fields=["status"])
+
+
+@CELERY_APP.task(name="setup_user_profile")
+def setup_user_profile_task(user_id: uuid.UUID) -> None:
+    """Create all models a users account needs."""
+
+    # create user settings
+    if not UserGenericSettings.objects.filter(user_id=user_id).exists():
+        UserGenericSettings.objects.create(
+            user_id=user_id,
+            notification={
+                "like": True,
+                "comment": True,
+                "follow": True,
+                "share": True,
+                "mention": True,
+            },
+        )
