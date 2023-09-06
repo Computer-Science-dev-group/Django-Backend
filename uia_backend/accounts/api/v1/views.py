@@ -31,7 +31,10 @@ from uia_backend.accounts.api.v1.serializers import (
     UserRegistrationSerializer,
     VerifyResetPasswordOTPSerializer,
 )
-from uia_backend.accounts.api.v1.throttles import PasswordRestThrottle
+from uia_backend.accounts.api.v1.throttles import (
+    ChangePassswordThrottle,
+    PasswordRestThrottle,
+)
 from uia_backend.accounts.models import (
     CustomUser,
     Follows,
@@ -216,6 +219,7 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
 class ChangePasswordAPIView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
     permission_classes = [permissions.IsAuthenticated]
+    throttle_classes = [ChangePassswordThrottle]
     http_method_names = ["put"]
 
     def get_object(self) -> Any:

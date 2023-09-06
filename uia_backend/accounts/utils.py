@@ -68,7 +68,7 @@ def get_location_from_ip(ip: str) -> str | None:
     elif response.status_code == 429:
         Logger.error(
             "uia_backend::accounts::utils::get_location_from_ip:: API free quota has been exceeded",
-            extra={"detail": response.json()},
+            extra={"detail": response.text},
         )
     else:
         Logger.error(
