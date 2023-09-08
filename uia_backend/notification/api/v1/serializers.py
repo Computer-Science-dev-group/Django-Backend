@@ -12,7 +12,6 @@ class GenericNotificationRelatedField(serializers.RelatedField):
         """Properly parse notification actor or target objects."""
 
         # NOTE: This needs to be updated as we progress
-
         if isinstance(value, CustomUser):
             serializer = ProfileSerializer(instance=value)
             data = serializer.data
