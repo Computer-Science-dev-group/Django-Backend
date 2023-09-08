@@ -26,6 +26,7 @@ class CentrifugoConnector:
         **kwargs: dict[str, Any],
     ) -> None:
         """Publish event to centrifugo."""
+        # https://centrifugal.dev/docs/3/server/server_api#publish
 
         try:
             payload = {"event": event_name, "data": event_data, **kwargs}
@@ -52,6 +53,7 @@ class CentrifugoConnector:
         **kwargs: dict[str, Any],
     ) -> None:
         """Broadcast event to multiple centrifugo channels."""
+        # https://centrifugal.dev/docs/3/server/server_api#broadcast
 
         try:
             payload = {"event": event_name, "data": event_data, **kwargs}
@@ -69,3 +71,22 @@ class CentrifugoConnector:
                     **kwargs,
                 },
             )
+
+    def is_user_active(self, user_channel: str) -> bool:
+        """Check if a user is online by retriving their private channel presence."""
+        # https://centrifugal.dev/docs/3/server/server_api#presence
+
+        try:
+            response = self.client.presence(channel=user_channel)
+        except (ValueError, CentException):
+            response = {}
+            logger.warning(
+                msg="uia_backend::libs::centrifugo::CentrifugoConnector::is_user_active:: "
+                "Error occured while checking users presence",
+                extra={
+                    "channel": user_channel,
+                },
+            )
+
+        channel_presence = response.get("result", {})
+        return (len(channel_presence.keys())) > 0
