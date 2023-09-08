@@ -321,7 +321,7 @@ class UserProfileDetailAPIView(generics.RetrieveAPIView):
 
     def get_object(self) -> CustomUser:
         return get_object_or_404(
-            CustomUser.objects.prefetch_related("channel"),
+            klass=CustomUser,
             id=self.kwargs["user_id"],
             is_active=True,
         )

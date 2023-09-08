@@ -912,6 +912,52 @@ class ResetPasswordAPIViewTests(APITestCase):
         )
 
 
+class UserProfileDetailAPIViewTests(APITestCase):
+    def setUp(self) -> None:
+        self.user = UserModelFactory.create(email="user@example.com", is_active=True)
+
+        self.user_follower_count = Follows.objects.filter(user_to=self.user).count()
+        self.user_following_count = Follows.objects.filter(user_from=self.user).count()
+
+        self.url = reverse("accounts_api_v1:accounts_detail", args=[self.user.id])
+
+    def test_unauthenticated_user_cannot_get_their_profile(self):
+        """Test to assert that an unauthenticated user cannot get  their profile"""
+
+        response = self.client.get(path=self.url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_authenticated_user_can_get_their_profile(self):
+        """Test an authenticated user can get their profile"""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(path=self.url)
+        self.assertEqual(
+            response.json(),
+            {
+                "status": "Success",
+                "code": 200,
+                "data": {
+                    "id": str(self.user.id),
+                    "first_name": self.user.first_name,
+                    "last_name": self.user.last_name,
+                    "profile_picture": self.user.profile_picture or None,
+                    "cover_photo": self.user.cover_photo or None,
+                    "phone_number": self.user.phone_number or None,
+                    "display_name": f"@{self.user.first_name.lower()}{self.user.last_name.lower()}",
+                    "year_of_graduation": self.user.year_of_graduation,
+                    "department": self.user.department,
+                    "faculty": self.user.faculty,
+                    "bio": self.user.bio,
+                    "gender": self.user.gender,
+                    "date_of_birth": str(self.user.date_of_birth),
+                    "ws_channel_name": f"${settings.USER_NAMESPACE}:{self.user.id}#{self.user.id}",
+                    "follower_count": self.user_follower_count,
+                    "following_count": self.user_following_count,
+                },
+            },
+        )
+
+
 class FriendShipInvitationListAPIViewTests(APITestCase):
     def setUp(self) -> None:
         self.url = reverse("accounts_api_v1:friendship_invitation")
