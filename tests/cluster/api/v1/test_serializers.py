@@ -47,6 +47,7 @@ class ClusterSerializerTests(CustomSerializerTests):
             },
             "label": "Test Invalid data empty title.",
             "context": None,
+            "error": {"title": ["This field may not be blank."]},
         },
     ]
 
@@ -86,6 +87,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
             },
         ]
 
+        some_uuid = str(uuid.uuid4())
         self.INVALID_DATA = [
             {
                 "data": {
@@ -95,6 +97,7 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid status",
                 "context": {"request": request},
+                "error": {"status": ['"5" is not a valid choice.']},
             },
             {
                 "data": {
@@ -104,15 +107,21 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid duration",
                 "context": {"request": request},
+                "error": {
+                    "duration": ["Ensure this value is greater than or equal to 1."]
+                },
             },
             {
                 "data": {
                     "status": 0,
                     "duration": 10,
-                    "user": str(uuid.uuid4()),
+                    "user": some_uuid,
                 },
                 "label": "Test invalid user",
                 "context": {"request": request},
+                "error": {
+                    "user": [f'Invalid pk "{some_uuid}" - object does not exist.']
+                },
             },
             {
                 "data": {
@@ -122,6 +131,9 @@ class ClusterInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid user. Can not send invitation to yourself.",
                 "context": {"request": request},
+                "error": {
+                    "user": ["Invalid user. Can not send inivitation to this user."]
+                },
             },
         ]
 

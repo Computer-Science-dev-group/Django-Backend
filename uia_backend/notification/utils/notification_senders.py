@@ -21,7 +21,7 @@ class EventSettings(TypedDict):
 
     verb: str
     send_push_notification: bool
-    send_in_app_notifcation: bool
+    send_in_app_notification: bool
 
 
 class NotifierError(Exception):
@@ -42,7 +42,7 @@ class Notifier:
     __event_map: dict[str, EventSettings] = {
         "TEST_EVENT": {
             "verb": "TESTING event",
-            "send_in_app_notifcation": True,
+            "send_in_app_notification": True,
             "send_push_notification": False,
         }
     }
@@ -67,7 +67,7 @@ class Notifier:
                 f"Invalid event ensure that {event} can be handled by notifier."
             )
 
-    def __send_push_notitfication(self) -> None:
+    def __send_push_notification(self) -> None:
         """
         Sends a push notification.
         This method is currently empty and needs to be implemented.
@@ -117,8 +117,8 @@ class Notifier:
         It calls the `__send_in_app_notification` and `__send_push_notification` methods based on the event settings.
         """
 
-        if self.event_settings["send_in_app_notifcation"]:
+        if self.event_settings["send_in_app_notification"]:
             self.__send_in_app_notification()
 
         if self.event_settings["send_push_notification"]:
-            self.__send_push_notitfication()
+            self.__send_push_notification()
