@@ -149,6 +149,11 @@ class PostSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File has been attached to another post).",
+                "error": {
+                    "file_ids": [
+                        f'Invalid pk "{post_file.id}" - object does not exist.'
+                    ]
+                },
             },
             {
                 "data": {
@@ -158,6 +163,11 @@ class PostSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File has been attached to another comment).",
+                "error": {
+                    "file_ids": [
+                        f'Invalid pk "{comment_file.id}" - object does not exist.'
+                    ]
+                },
             },
             {
                 "data": {
@@ -167,6 +177,9 @@ class PostSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File has been attached to another DM).",
+                "error": {
+                    "file_ids": [f'Invalid pk "{dm_file.id}" - object does not exist.']
+                },
             },
             {
                 "data": {
@@ -176,6 +189,7 @@ class PostSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File does not belong to user).",
+                "error": {"file_ids": ["Invaid file id."]},
             },
         ]
 
@@ -268,6 +282,11 @@ class CommentSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File has been attached to another post).",
+                "error": {
+                    "file_ids": [
+                        f'Invalid pk "{post_file.id}" - object does not exist.'
+                    ]
+                },
             },
             {
                 "data": {
@@ -276,6 +295,11 @@ class CommentSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File has been attached to another comment).",
+                "error": {
+                    "file_ids": [
+                        f'Invalid pk "{comment_file.id}" - object does not exist.'
+                    ]
+                },
             },
             {
                 "data": {
@@ -284,6 +308,7 @@ class CommentSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Test invalid data (File does not belong to user).",
+                "error": {"file_ids": ["Invaid file id."]},
             },
         ]
 
@@ -330,11 +355,19 @@ class FileModelSerializerTests(CustomSerializerTests):
                 "data": {"file_type": FileModel.FILE_TYPE_IMAGE, "file": ""},
                 "label": "Invalid file",
                 "context": None,
+                "error": {
+                    "file": [
+                        "The submitted data was not a file. Check the encoding type on the form."
+                    ]
+                },
             },
             {
                 "data": {"file_type": FileModel.FILE_TYPE_IMAGE, "file": large_file},
                 "label": "File too large",
                 "context": None,
+                "error": {
+                    "file": ["File size has exceeded max file upload size (10MB)"]
+                },
             },
         ]
 
@@ -443,6 +476,7 @@ class CreateDMSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "Invalid friendship id fails.",
+                "error": {"friendship_id": ["Friendship record does not exists."]},
             },
             {
                 "data": {
@@ -453,6 +487,7 @@ class CreateDMSerializerTests(CustomSerializerTests):
                 },
                 "context": {"request": request},
                 "label": "frienship_id not belonging to authenticated user fails",
+                "error": {"friendship_id": ["Friendship record does not exists."]},
             },
         ]
 
@@ -487,6 +522,6 @@ class UpdateDMSerializerTests(CustomSerializerTests):
                 "content": "",
             },
             "label": "Content is cannot be empty.",
+            "error": {"content": ["This field may not be blank."]},
         },
-        {"data": {}, "label": "Content is required."},
     ]

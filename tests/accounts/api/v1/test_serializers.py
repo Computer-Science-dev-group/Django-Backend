@@ -76,6 +76,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
             },
             "label": "Test invalid year_of_graduation 1",
             "context": None,
+            "error": {"year_of_graduation": ["Invalid graduation year."]},
         },
         {
             "data": {
@@ -91,6 +92,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
             },
             "label": "Test invalid year_of_graduation 2",
             "context": None,
+            "error": {"year_of_graduation": ["Invalid graduation year."]},
         },
         {
             "data": {
@@ -104,6 +106,7 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
             },
             "label": "Test invalid year_of_graduation format 3",
             "context": None,
+            "error": {"year_of_graduation": ["Invalid graduation year."]},
         },
         {
             "data": {
@@ -117,6 +120,11 @@ class UserRegistrationSerializerTests(CustomSerializerTests):
             },
             "label": "Test invalid password",
             "context": None,
+            "error": {
+                "password": [
+                    "['This password is too short. It must contain at least 8 characters.']"
+                ]
+            },
         },
     ]
 
@@ -153,12 +161,14 @@ class EmailVerificationSerializerTests(CustomSerializerTests):
                     "signature": "asjnj-lsndjka-nsdnxswsn.dnas-mdnamsnd",
                 },
                 "label": "Test invalid bad signature",
+                "error": {"non_field_errors": ["Invalid link or link has expired."]},
             },
             {
                 "data": {
                     "signature": signer.sign_object(str(uuid.uuid4())),
                 },
                 "label": "Invalid Email Record",
+                "error": {"non_field_errors": ["Invalid link or link has expired."]},
             },
         ]
 
@@ -241,6 +251,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test first_name is required",
                 "context": {"request": request},
+                "error": {"first_name": ["This field may not be blank."]},
             },
             {
                 "data": {
@@ -251,6 +262,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test last_name is required",
                 "context": {"request": request},
+                "error": {"last_name": ["This field may not be blank."]},
             },
             {
                 "data": {
@@ -261,6 +273,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test display_name is required",
                 "context": {"request": request},
+                "error": {"display_name": ["This field may not be blank."]},
             },
             {
                 "data": {
@@ -271,6 +284,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test gener is required",
                 "context": {"request": request},
+                "error": {"gender": ['"" is not a valid choice.']},
             },
             {
                 "data": {
@@ -281,6 +295,7 @@ class UserProfileSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid gender option",
                 "context": {"request": request},
+                "error": {"gender": ['"Stray" is not a valid choice.']},
             },
         ]
 
@@ -306,6 +321,11 @@ class ChangePasswordSerializerTests(CustomSerializerTests):
             "data": {"password": "string"},
             "label": "Test invalid password lenght",
             "context": None,
+            "error": {
+                "password": [
+                    "['This password is too short. It must contain at least 8 characters.']"
+                ]
+            },
         }
     ]
 
@@ -345,21 +365,41 @@ class LoginSerializerTests(CustomSerializerTests):
                 "data": {"password": "12345", "email": "wrong@example.com"},
                 "label": "Test invalid data wrong email.",
                 "context": None,
+                "error": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
             {
                 "data": {"password": "xxxxxx", "email": "user@example.com"},
                 "label": "Test invalid data wrong password.",
                 "context": None,
+                "error": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
             {
                 "data": {"password": "12345", "email": "wrong@example.com"},
                 "label": "Test invalid data wrong email.",
                 "context": None,
+                "error": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
             {
                 "data": {"password": "12345", "email": "inactive@example.com"},
                 "label": "Test invalid inactive user.",
                 "context": None,
+                "error": {
+                    "non_field_errors": [
+                        "Invalid credentials or your account is inactive."
+                    ]
+                },
             },
         ]
 
@@ -395,6 +435,7 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test empty email",
                 "context": None,
+                "error": {"email": ["This field may not be blank."]},
             },
             {
                 "data": {
@@ -402,6 +443,7 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid email address",
                 "context": None,
+                "error": {"email": ["Enter a valid email address."]},
             },
             {
                 "data": {
@@ -409,6 +451,11 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test inactive email address",
                 "context": None,
+                "error": {
+                    "email": [
+                        "Invalid email address. No active user with this credentials was found."
+                    ]
+                },
             },
             {
                 "data": {
@@ -416,6 +463,11 @@ class RestPasswordRequestSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test non-existent email address",
                 "context": None,
+                "error": {
+                    "email": [
+                        "Invalid email address. No active user with this credentials was found."
+                    ]
+                },
             },
         ]
 
@@ -472,6 +524,7 @@ class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
                     "email": user.email,
                 },
                 "label": "Test invalid otp signature",
+                "error": {"otp": ["Invalid otp or otp has expired."]},
             },
             {
                 "data": {
@@ -479,6 +532,7 @@ class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
                     "email": user.email,
                 },
                 "label": "Non pending otp",
+                "error": {"otp": ["Invalid otp or otp has expired."]},
             },
             {
                 "data": {
@@ -486,6 +540,11 @@ class VerifyResetPasswordOTPSerializerTests(CustomSerializerTests):
                     "email": "invalid_email@example.com",
                 },
                 "label": "Test invalid email",
+                "error": {
+                    "email": [
+                        "Invalid email address. No active user with this credentials was found."
+                    ]
+                },
             },
         ]
 
@@ -544,6 +603,11 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "password_change_key": non_verified_password_reset_record.generate_signed_identifier(),
                 },
                 "label": "Non verified otp signature",
+                "error": {
+                    "password_change_key": [
+                        "Invalid password_change_key or session has expired. Please restart process."
+                    ]
+                },
             },
             {
                 "data": {
@@ -552,6 +616,11 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
                 "label": "Invalid email address.",
+                "error": {
+                    "email": [
+                        "Invalid email address. No active user with this credentials was found."
+                    ]
+                },
             },
             {
                 "data": {
@@ -560,6 +629,11 @@ class ResetPasswordSerializerTests(CustomSerializerTests):
                     "password_change_key": verified_password_reset_record.generate_signed_identifier(),
                 },
                 "label": "Invalid password.",
+                "error": {
+                    "new_password": [
+                        "['This password is too short. It must contain at least 8 characters.']"
+                    ]
+                },
             },
         ]
 
@@ -610,6 +684,7 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
             },
         ]
 
+        some_uuid = str(uuid.uuid4())
         self.INVALID_DATA = [
             {
                 "data": {
@@ -618,14 +693,18 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid status",
                 "context": {"request": request},
+                "error": {"status": ['"5" is not a valid choice.']},
             },
             {
                 "data": {
                     "status": 0,
-                    "sent_to": str(uuid.uuid4()),
+                    "sent_to": some_uuid,
                 },
                 "label": "Test invalid user",
                 "context": {"request": request},
+                "error": {
+                    "sent_to": [f'Invalid pk "{some_uuid}" - object does not exist.']
+                },
             },
             {
                 "data": {
@@ -634,6 +713,9 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid user. Can not send invitation to yourself.",
                 "context": {"request": request},
+                "error": {
+                    "sent_to": ["Invalid user. Can not send inivitation to this user."]
+                },
             },
             {
                 "data": {
@@ -642,6 +724,11 @@ class FriendshipInvitationSerializerTests(CustomSerializerTests):
                 },
                 "label": "Test invalid user. Can invite inactive user.",
                 "context": {"request": request},
+                "error": {
+                    "sent_to": [
+                        f'Invalid pk "{inactive_user.id}" - object does not exist.'
+                    ]
+                },
             },
         ]
 
@@ -701,8 +788,15 @@ class FollowingSerializerTests(CustomSerializerTests):
             }
         ]
 
+        some_uuid = str(uuid.uuid4())
         self.INVALID_DATA = [
-            {"data": {"user_id": uuid.uuid4()}, "label": "Test invalid user_id data."}
+            {
+                "data": {"user_id": some_uuid},
+                "label": "Test invalid user_id data.",
+                "error": {
+                    "user_id": [f'Invalid pk "{some_uuid}" - object does not exist.']
+                },
+            }
         ]
 
 
@@ -762,6 +856,7 @@ class UserGenericSettingsSerializerTests(CustomSerializerTests):
                 }
             },
             "label": "Missing notification field.",
+            "error": {"notification": ["Notification field invalid."]},
         },
         {
             "data": {
@@ -775,6 +870,7 @@ class UserGenericSettingsSerializerTests(CustomSerializerTests):
                 }
             },
             "label": "Extra notification field.",
+            "error": {"notification": ["Notification field invalid."]},
         },
         {
             "data": {
@@ -786,6 +882,7 @@ class UserGenericSettingsSerializerTests(CustomSerializerTests):
                     "mention": "True",
                 }
             },
-            "label": "Invalid  data type in notification fields.",
+            "label": "Invalid data type in notification fields.",
+            "error": {"notification": ["Notification field invalid."]},
         },
     ]

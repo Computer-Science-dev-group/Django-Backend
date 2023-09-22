@@ -17,7 +17,7 @@ class NotifierTests(TestCase):
     def test_send_notification_with_send_in_app_notification_true(self):
         """Test send notification event with send_in_app_notification field set to true."""
 
-        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notifcation"] = True
+        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notification"] = True
         event_data = {
             "recipients": [self.user],
             "verb": "Test notification",
@@ -44,7 +44,7 @@ class NotifierTests(TestCase):
     def test_send_notification_with_send_in_app_notification_false(self):
         """Test send notification event with send_in_app_notification field set to true."""
 
-        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notifcation"] = False
+        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notification"] = False
         event_data = {
             "recipients": [self.user],
             "verb": "Test notification",
@@ -62,7 +62,7 @@ class NotifierTests(TestCase):
         mock_send_in_app_notification.assert_not_called()
 
     def test_send_notification_with_send_push_notification_true(self):
-        """Test send notification event with send_in_app_notification field set to true."""
+        """Test send notification event with send_push_notification field set to true."""
 
         Notifier._Notifier__event_map["TEST_EVENT"]["send_push_notification"] = True
         event_data = {
@@ -74,15 +74,17 @@ class NotifierTests(TestCase):
         }
 
         with patch.object(
-            Notifier, "_Notifier__send_push_notitfication"
-        ) as mock_send_push_notitfication:
+            Notifier, "_Notifier__send_push_notification", return_value=[None]
+        ) as send_push_notification, patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ):
             notifier = Notifier("TEST_EVENT", event_data)
             notifier.send_notification()
 
-        mock_send_push_notitfication.assert_called_once()
+        send_push_notification.assert_called_once()
 
     def test_send_notification_with_send_push_notification_false(self):
-        """Test send notification event with send_in_app_notification field set to false."""
+        """Test send notification event with send_push_notification field set to false."""
 
         Notifier._Notifier__event_map["TEST_EVENT"]["send_push_notification"] = False
         event_data = {
@@ -94,12 +96,14 @@ class NotifierTests(TestCase):
         }
 
         with patch.object(
-            Notifier, "_Notifier__send_push_notitfication"
-        ) as mock_send_push_notitfication:
+            Notifier, "_Notifier__send_push_notification"
+        ) as send_push_notification, patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ):
             notifier = Notifier("TEST_EVENT", event_data)
             notifier.send_notification()
 
-        mock_send_push_notitfication.assert_not_called()
+        send_push_notification.assert_not_called()
 
     def test_send_notification_with_invalid_event(self):
         """Send notification raise InvalidEventError if invalid event is passed."""
@@ -123,7 +127,7 @@ class NotifierTests(TestCase):
         it is reduced to NotificationContentTypeArgs before send_in_app_notification is called.
         """
 
-        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notifcation"] = True
+        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notification"] = True
         event_data = {
             "recipients": [self.user],
             "verb": "Test notification",
@@ -157,7 +161,7 @@ class NotifierTests(TestCase):
         it is reduced to NotificationContentTypeArgs before send_in_app_notification is called.
         """
 
-        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notifcation"] = True
+        Notifier._Notifier__event_map["TEST_EVENT"]["send_in_app_notification"] = True
         event_data = {
             "recipients": [self.user],
             "verb": "Test notification",

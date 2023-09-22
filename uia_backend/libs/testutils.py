@@ -14,6 +14,7 @@ class SerializerTestData:
 
     data: dict[str, Any]
     context: dict[str, Any]
+    error: dict[str, Any]
     label: str
 
 
@@ -99,9 +100,14 @@ class CustomSerializerTests(TestCase):
                 context=invalid_data.get("context"),
             )
 
-            self.assertEqual(
+            self.assertFalse(
                 serializer.is_valid(),
-                False,
+                msg=invalid_data["label"],
+            )
+
+            self.assertEqual(
+                {key: msg for key, msg in serializer.errors.items()},
+                invalid_data["error"],
                 msg=invalid_data["label"],
             )
 
