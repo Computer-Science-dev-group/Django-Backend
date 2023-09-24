@@ -52,28 +52,26 @@ class Notifier:
             "send_in_app_notification": True,
             "send_push_notification": False,
         },
-
-         notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION: {
+        notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION: {
             "verb": "User received cluster Invitation",
             "send_in_app_notification": True,
             "send_push_notification": False,
         },
-        notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION:{
+        notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION: {
             "verb": "Cancel user cluster Invitation",
             "send_in_app_notification": True,
             "send_push_notification": False,
         },
-        
-        notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION:{
+        notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION: {
             "verb": "User accepted cluster Invitation",
             "send_in_app_notification": True,
             "send_push_notification": False,
         },
-        notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION:{
+        notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION: {
             "verb": "User rejected cluster Invitation",
             "send_in_app_notification": True,
             "send_push_notification": False,
-        }
+        },
     }
 
     def __init__(self, event: str, data: EventData):

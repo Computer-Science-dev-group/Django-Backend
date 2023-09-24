@@ -47,9 +47,3 @@ NOTIFICATION_TYPE_CHOICES = (
     (NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION, "Accepted Cluster Invitation"),
     (NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION, "Rejected Cluster Invitation"),
 )
-
-
-
-
-
-

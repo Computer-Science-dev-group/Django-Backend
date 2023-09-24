@@ -196,7 +196,6 @@ class ClusterListCreateAPIViewTests(APITestCase):
                 "is_default": False,
             },
         }
-
         self.assertDictEqual(expected_response_data, response.json())
 
         creator_permissions = [
@@ -895,7 +894,7 @@ class ClusterInvitationListAPIViewTests(APITestCase):
                 "app_label": "cluster",
                 "model_name": "cluster",
             },
-            notification_type=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
+            notification_type=notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION,
             data=dict(
                 ClusterInvitationSerializer().to_representation(
                     instance=invitation_record
@@ -1092,7 +1091,7 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
             "uia_backend.notification.tasks.send_in_app_notification_task.delay"
         ) as mock_send_in_app_notification:
             response = self.client.patch(path=url, data=request_data)
-            
+
         mock_send_in_app_notification.assert_called_once_with(
             recipients=[invitation_record.user.id],
             verb="Cancelled your invitation to cluster",
@@ -1107,8 +1106,8 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
                 "model_name": "cluster",
             },
             notification_type=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
-            data=None
-        )      
+            data=None,
+        )
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
 
@@ -1149,12 +1148,11 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
                 "user": str(user_to_invite.id),
             },
         }
-        
+
         with patch(
             "uia_backend.notification.tasks.send_in_app_notification_task.delay"
-        ) :
+        ):
             response = self.client.patch(path=url, data=request_data)
-            
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
@@ -1280,7 +1278,7 @@ class UserClusterInvitationDetailAPIView(APITestCase):
             "uia_backend.notification.tasks.send_in_app_notification_task.delay"
         ) as mock_send_in_app_notification:
             response = self.client.patch(path=self.url, data=request_data)
-            
+
         mock_send_in_app_notification.assert_called_once_with(
             recipients=[self.invitation_record.created_by.id],
             verb="Accepted invitation to cluster",
@@ -1295,10 +1293,9 @@ class UserClusterInvitationDetailAPIView(APITestCase):
                 "model_name": "cluster",
             },
             notification_type=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION,
-            data=None
+            data=None,
         )
 
-        
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
 
@@ -1324,12 +1321,12 @@ class UserClusterInvitationDetailAPIView(APITestCase):
                 "user": str(self.user.id),
             },
         }
-        
+
         with patch(
             "uia_backend.notification.tasks.send_in_app_notification_task.delay"
         ) as mock_send_in_app_notification:
             response = self.client.patch(path=self.url, data=request_data)
-             
+
         mock_send_in_app_notification.assert_called_once_with(
             recipients=[self.invitation_record.created_by.id],
             verb="rejected invitation to cluster",
@@ -1344,12 +1341,11 @@ class UserClusterInvitationDetailAPIView(APITestCase):
                 "model_name": "cluster",
             },
             notification_type=notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
-            data=None
+            data=None,
         )
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
-
 
         self.invitation_record.refresh_from_db()
         self.assertEqual(

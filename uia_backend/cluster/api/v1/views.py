@@ -45,7 +45,7 @@ class ClusterListCreateAPIView(generics.ListCreateAPIView):
             members__id=self.request.user.id,
         )
 
-   
+
 class ClusterDetailAPIView(generics.RetrieveUpdateAPIView):
     """Retrieve/Update a cluster API View."""
 
@@ -186,7 +186,8 @@ class ClusterInvitationListAPIView(generics.ListCreateAPIView):
             "metadata": dict(serializer.to_representation(notification)),
         }
         notifier = Notifier(
-            event=notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION, data=notification_data
+            event=notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION,
+            data=notification_data,
         )
 
         notifier.send_notification()
@@ -213,26 +214,27 @@ class ClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
             request=self.request, obj=invitation_record.cluster
         )
         return invitation_record
-    
+
     def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        invitation_record = ClusterInvitation.objects.get(id=self.kwargs["invitation_id"])
+        invitation_record = ClusterInvitation.objects.get(
+            id=self.kwargs["invitation_id"]
+        )
 
         notification_data = {
             "recipients": [invitation_record.user],
-            "verb":  "Cancelled your invitation to cluster",
+            "verb": "Cancelled your invitation to cluster",
             "actor": invitation_record.created_by,
             "target": invitation_record.cluster,
-            "metadata": None
+            "metadata": None,
         }
         notifier = Notifier(
-                event=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
-                data=notification_data,
+            event=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
+            data=notification_data,
         )
         notifier.send_notification()
 
         return super().patch(request, *args, **kwargs)
 
-        
 
 class UserClusterInvitationListAPIView(generics.ListAPIView):
     serializer_class = ClusterInvitationSerializer
@@ -256,22 +258,27 @@ class UserClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
         return get_object_or_404(
             self.request.user.cluster_invitations, id=self.kwargs["invitation_id"]
         )
-    
-    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
 
-        invitation_record = ClusterInvitation.objects.get(id=self.kwargs["invitation_id"])
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        invitation_record = ClusterInvitation.objects.get(
+            id=self.kwargs["invitation_id"]
+        )
         status = self.request.data["status"]
 
         notification_data = {
             "recipients": [invitation_record.created_by],
-            "verb": "Accepted invitation to cluster" if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED else "rejected invitation to cluster",
+            "verb": "Accepted invitation to cluster"
+            if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED
+            else "rejected invitation to cluster",
             "actor": invitation_record.user,
             "target": invitation_record.cluster,
-            "metadata": None
+            "metadata": None,
         }
         notifier = Notifier(
-                event=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED else notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
-                data=notification_data,
+            event=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION
+            if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED
+            else notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
+            data=notification_data,
         )
         notifier.send_notification()
 
