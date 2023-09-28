@@ -1,6 +1,6 @@
 from datetime import timedelta
 from unittest import mock
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 from urllib.parse import urlencode
 
 import responses
@@ -24,6 +24,7 @@ from tests.accounts.test_models import (
     UserModelFactory,
 )
 from uia_backend.accounts.api.v1.serializers import (
+    FollowingSerializer,
     ProfileSerializer,
     UserProfileSerializer,
 )
@@ -41,6 +42,10 @@ from uia_backend.accounts.models import (
 )
 from uia_backend.cluster.models import Cluster, ClusterMembership, InternalCluster
 from uia_backend.libs.testutils import get_test_image_file
+from uia_backend.notification.constants import (
+    FOLLOW_USER_NOTIFICATION,
+    UNFOLLOW_USER_NOTIFICATION,
+)
 
 
 class UserRegistrationAPIViewTests(APITestCase):
@@ -1647,6 +1652,7 @@ class UserFollowingListAPIViewTests(APITestCase):
             last_name="Magna",
         )
 
+        UserGenericSettingsFactory.create(user=self.user_2)
         self.url = reverse("accounts_api_v1:user_following_list")
 
     def test_get_fails_when_unauthenticated(self):
@@ -1760,7 +1766,11 @@ class UserFollowingListAPIViewTests(APITestCase):
 
     def test_post_successfully(self):
         self.client.force_authenticate(self.authenticated_user)
-        response = self.client.post(self.url, data={"user_id": self.user_2.id})
+
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.post(self.url, data={"user_id": self.user_2.id})
 
         follow_records = Follows.objects.filter(
             user_from=self.authenticated_user, user_to=self.user_2
@@ -1781,13 +1791,36 @@ class UserFollowingListAPIViewTests(APITestCase):
                     ),
                 },
             },
+        )
+
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[self.user_2.id],
+            verb="followed",
+            actor_dict={
+                "id": str(self.authenticated_user.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(self.user_2.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            notification_type=FOLLOW_USER_NOTIFICATION,
+            data=dict(
+                FollowingSerializer().to_representation(instance=follow_records.first())
+            ),
         )
 
         # show that post is not affect by user_id query_param
         # but first lets delete the follow record
         follow_records.delete()
-        url = f"{self.url}?{urlencode({'user_id': self.user_2.id})}"
-        response = self.client.post(url, data={"user_id": self.user_2.id})
+
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            url = f"{self.url}?{urlencode({'user_id': self.user_2.id})}"
+            response = self.client.post(url, data={"user_id": self.user_2.id})
 
         follow_records = Follows.objects.filter(
             user_from=self.authenticated_user, user_to=self.user_2
@@ -1808,6 +1841,25 @@ class UserFollowingListAPIViewTests(APITestCase):
                     ),
                 },
             },
+        )
+
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[self.user_2.id],
+            verb="followed",
+            actor_dict={
+                "id": str(self.authenticated_user.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(self.user_2.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            notification_type=FOLLOW_USER_NOTIFICATION,
+            data=dict(
+                FollowingSerializer().to_representation(instance=follow_records.first())
+            ),
         )
 
     def test_post_fails_if_user_is_already_being_followed(self):
@@ -1838,7 +1890,7 @@ class UserFollowingDetailAPIViewTests(APITestCase):
             last_name="Rok",
         )
 
-        FollowsFactory.create(
+        self.follow_record = FollowsFactory.create(
             user_from=self.authenticated_user,
             user_to=self.following_user_1,
         )
@@ -1849,6 +1901,8 @@ class UserFollowingDetailAPIViewTests(APITestCase):
             first_name="Forde",
             last_name="Magna",
         )
+
+        UserGenericSettingsFactory.create(user=self.following_user_1)
 
     def test_delete_fails_when_unauthenticated(self):
         url = reverse(
@@ -1883,7 +1937,31 @@ class UserFollowingDetailAPIViewTests(APITestCase):
         url = reverse(
             "accounts_api_v1:user_following_detail", args=[self.following_user_1.id]
         )
-        response = self.client.delete(path=url)
+
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.delete(path=url)
+
+        data = {
+            "recipients": [self.following_user_1.id],
+            "verb": "un-followed",
+            "actor_dict": {
+                "id": str(self.authenticated_user.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            "target_dict": {
+                "id": str(self.following_user_1.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            "notification_type": UNFOLLOW_USER_NOTIFICATION,
+            "data": dict(
+                FollowingSerializer().to_representation(instance=self.follow_record)
+            ),
+        }
+
         self.assertEqual(response.status_code, 204)
         self.assertEqual(response.data, None)
 
@@ -1892,6 +1970,8 @@ class UserFollowingDetailAPIViewTests(APITestCase):
                 user_from=self.authenticated_user, user_to=self.following_user_1
             ).exists()
         )
+
+        mock_send_in_app_notification.assert_called_once_with(**data)
 
 
 class UserGenericSettingsAPIViewTesTs(APITestCase):

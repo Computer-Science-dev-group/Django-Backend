@@ -10,7 +10,6 @@ from django.db.utils import Error
 from django.http import Http404
 from django.shortcuts import get_object_or_404, render
 from django_filters.rest_framework import DjangoFilterBackend
-from drf_spectacular.utils import OpenApiExample, extend_schema
 from rest_framework import filters, generics, permissions, status
 from rest_framework.request import Request
 from rest_framework.response import Response
@@ -50,6 +49,8 @@ from uia_backend.experiments.models import (
 )
 from uia_backend.messaging.api.v1.serializers import PostSerializer
 from uia_backend.messaging.models import Post
+from uia_backend.notification import constants as notification_constants
+from uia_backend.notification.utils.notification_senders import Notifier
 
 logger = getLogger()
 
@@ -59,26 +60,6 @@ class UserRegistrationAPIView(generics.CreateAPIView):
     permission_classes = [permissions.AllowAny]
 
     @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "code": 201,
-                    "data": {
-                        "first_name": "string",
-                        "last_name": "string",
-                        "email": "user@example.com",
-                        "faculty": "string",
-                        "department": "string",
-                        "year_of_graduation": "2001",
-                    },
-                },
-            )
-        ]
-    )
     def post(self, request: Request, *args: Any, **kwargs: dict[str, Any]) -> Response:
         # NOTE: (Joseph) we need to remove this code when done with this experiment
         # before doing any data validation lets check if ER001 is still active
@@ -116,18 +97,6 @@ class EmailVerificationAPIView(generics.GenericAPIView):
     permission_classes = [permissions.AllowAny]
 
     @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "message": "Your account has been successfully verified.",
-                },
-            )
-        ]
-    )
     def get(self, request: Request, signature: str) -> Response:
         serializer = self.get_serializer(data={"signature": signature})
         is_valid = serializer.is_valid()
@@ -154,67 +123,6 @@ class UserProfileAPIView(generics.RetrieveUpdateAPIView):
     def get_object(self) -> CustomUser:
         return self.request.user
 
-    @transaction.atomic()
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "code": 200,
-                    "data": {
-                        "id": "string",
-                        "first_name": "string",
-                        "last_name": "string",
-                        "faculty": "string",
-                        "department": "string",
-                        "year_of_graduation": "2001",
-                        "bio": "string",
-                        "display_name": "string",
-                        "phone_number": "string",
-                        "cover_photo": "string",
-                        "profile_picture": "string",
-                        "gender": "string",
-                    },
-                },
-            )
-        ]
-    )
-    def put(self, request, *args, **kwargs) -> Response:
-        """Subsequent updates to the user profile"""
-        return super().put(request, *args, **kwargs)
-
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "info": "Success",
-                    "code": 200,
-                    "data": {
-                        "id": "string",
-                        "first_name": "string",
-                        "last_name": "string",
-                        "profile_picture": "path/image.png",
-                        "cover_photo": "path/image.png",
-                        "phone_number": "string",
-                        "display_name": "string",
-                        "year_of_graduation": "1990",
-                        "department": "string",
-                        "faculty": "Science",
-                        "bio": "string",
-                        "gender": "string",
-                        "date_of_birth": "2000-10-08",
-                    },
-                },
-            )
-        ]
-    )
-    def get(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().get(request, *args, **kwargs)
-
 
 class ChangePasswordAPIView(generics.UpdateAPIView):
     serializer_class = ChangePasswordSerializer
@@ -225,40 +133,11 @@ class ChangePasswordAPIView(generics.UpdateAPIView):
     def get_object(self) -> Any:
         return self.request.user
 
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "code": 201,
-                    "info": "Success",
-                    "message": "Password Changed Successfully.",
-                },
-            )
-        ]
-    )
-    def put(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        return super().put(request, *args, **kwargs)
-
 
 class LoginAPIView(generics.GenericAPIView):
     serializer_class = LoginSerializer
     permission_classes = [permissions.AllowAny]
 
-    @extend_schema(
-        examples=[
-            OpenApiExample(
-                "Example",
-                response_only=True,
-                value={
-                    "status": "Success",
-                    "code": 200,
-                    "data": {"refresh_token": "string", "auth_token": "string"},
-                },
-            )
-        ]
-    )
     def post(self, request: Request) -> Response:
         """User login view."""
 
@@ -502,7 +381,25 @@ class UserFollowingListAPIView(generics.ListCreateAPIView):
         return query
 
     def perform_create(self, serializer: FollowingSerializer) -> None:
-        serializer.save(user_from=self.request.user)
+        follow_record = serializer.save(user_from=self.request.user)
+
+        if (
+            hasattr(follow_record.user_to, "settings")
+            and follow_record.user_to.settings.notification["follow"]
+        ):
+            # notify user that they have been followed
+            event_data = {
+                "recipients": [follow_record.user_to],
+                "verb": "followed",
+                "metadata": dict(serializer.to_representation(instance=follow_record)),
+                "actor": follow_record.user_from,
+                "target": follow_record.user_to,
+            }
+
+            notifier = Notifier(
+                event=notification_constants.FOLLOW_USER_NOTIFICATION, data=event_data
+            )
+            notifier.send_notification()
 
 
 class UserFollowingDetailAPIView(generics.DestroyAPIView):
@@ -515,6 +412,30 @@ class UserFollowingDetailAPIView(generics.DestroyAPIView):
         return get_object_or_404(
             Follows, user_from=self.request.user, user_to_id=self.kwargs["user_id"]
         )
+
+    def perform_destroy(self, instance: Follows) -> None:
+        """Unfollow a user."""
+
+        if (
+            hasattr(instance.user_to, "settings")
+            and instance.user_to.settings.notification["follow"]
+        ):
+            # notify user that they have been followed
+            event_data = {
+                "recipients": [instance.user_to],
+                "verb": "un-followed",
+                "metadata": dict(
+                    FollowingSerializer().to_representation(instance=instance)
+                ),
+                "actor": instance.user_from,
+                "target": instance.user_to,
+            }
+
+            notifier = Notifier(
+                event=notification_constants.UNFOLLOW_USER_NOTIFICATION, data=event_data
+            )
+            notifier.send_notification()
+        return super().perform_destroy(instance)
 
 
 class UserGenericSettingsAPIView(generics.RetrieveUpdateAPIView):
