@@ -19,5 +19,12 @@ EMAIL_EVENT_TYPE_CHOICES = (
 )
 
 
-# IN APP NOTIFICATION TYPES
-NOTIFICATION_TYPE_CHOICES = ()
+# user follower notification events
+FOLLOW_USER_NOTIFICATION = "new_follower_event"
+UNFOLLOW_USER_NOTIFICATION = "unfollow_event"
+
+# NOTIFICATION TYPES
+NOTIFICATION_TYPE_CHOICES = (
+    (FOLLOW_USER_NOTIFICATION, "New follower event"),
+    (UNFOLLOW_USER_NOTIFICATION, "Unfollow event"),
+)

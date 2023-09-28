@@ -3,6 +3,7 @@ from typing import Any, TypedDict
 from django.db.models import Model
 
 from uia_backend.accounts.models import CustomUser
+from uia_backend.notification import constants as notification_constants
 from uia_backend.notification.tasks import send_in_app_notification_task
 
 
@@ -19,7 +20,6 @@ class EventData(TypedDict):
 class EventSettings(TypedDict):
     """Event settings."""
 
-    verb: str
     send_push_notification: bool
     send_in_app_notification: bool
 
@@ -41,10 +41,17 @@ class Notifier:
 
     __event_map: dict[str, EventSettings] = {
         "TEST_EVENT": {
-            "verb": "TESTING event",
             "send_in_app_notification": True,
             "send_push_notification": False,
-        }
+        },
+        notification_constants.FOLLOW_USER_NOTIFICATION: {
+            "send_in_app_notification": True,
+            "send_push_notification": False,
+        },
+        notification_constants.UNFOLLOW_USER_NOTIFICATION: {
+            "send_in_app_notification": True,
+            "send_push_notification": False,
+        },
     }
 
     def __init__(self, event: str, data: EventData):
