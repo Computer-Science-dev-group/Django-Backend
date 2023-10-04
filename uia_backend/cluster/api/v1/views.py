@@ -25,6 +25,8 @@ from uia_backend.cluster.constants import (
 )
 from uia_backend.cluster.models import Cluster, ClusterInvitation, ClusterMembership
 from uia_backend.libs.permissions import unassign_object_permissions
+from uia_backend.notification import constants as notification_constants
+from uia_backend.notification.utils.notification_senders import Notifier
 
 
 class ClusterListCreateAPIView(generics.ListCreateAPIView):
@@ -43,10 +45,7 @@ class ClusterListCreateAPIView(generics.ListCreateAPIView):
             members__id=self.request.user.id,
         )
 
-    def perform_create(self, serializer: ClusterSerializer) -> None:
-        serializer.save(created_by=self.request.user)
-
-
+   
 class ClusterDetailAPIView(generics.RetrieveUpdateAPIView):
     """Retrieve/Update a cluster API View."""
 
@@ -173,10 +172,24 @@ class ClusterInvitationListAPIView(generics.ListCreateAPIView):
         return cluster
 
     def perform_create(self, serializer: ClusterInvitationSerializer) -> None:
-        serializer.save(
+        notification = serializer.save(
             created_by=self.request.user,
             cluster_id=self.kwargs["cluster_id"],
         )
+
+        # send in app notification to invlitation recipient
+        notification_data = {
+            "recipients": [notification.user],
+            "verb": "invited you to a cluster",
+            "actor": notification.created_by,
+            "target": notification.cluster,
+            "metadata": dict(serializer.to_representation(notification)),
+        }
+        notifier = Notifier(
+            event=notification_constants.NOTIFICATION_TYPE_RECIEVED_CLUSTER_INVITATION, data=notification_data
+        )
+
+        notifier.send_notification()
 
 
 class ClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
@@ -200,7 +213,26 @@ class ClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
             request=self.request, obj=invitation_record.cluster
         )
         return invitation_record
+    
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+        invitation_record = ClusterInvitation.objects.get(id=self.kwargs["invitation_id"])
 
+        notification_data = {
+            "recipients": [invitation_record.user],
+            "verb":  "Cancelled your invitation to cluster",
+            "actor": invitation_record.created_by,
+            "target": invitation_record.cluster,
+            "metadata": None
+        }
+        notifier = Notifier(
+                event=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
+                data=notification_data,
+        )
+        notifier.send_notification()
+
+        return super().patch(request, *args, **kwargs)
+
+        
 
 class UserClusterInvitationListAPIView(generics.ListAPIView):
     serializer_class = ClusterInvitationSerializer
@@ -224,3 +256,23 @@ class UserClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
         return get_object_or_404(
             self.request.user.cluster_invitations, id=self.kwargs["invitation_id"]
         )
+    
+    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
+
+        invitation_record = ClusterInvitation.objects.get(id=self.kwargs["invitation_id"])
+        status = self.request.data["status"]
+
+        notification_data = {
+            "recipients": [invitation_record.created_by],
+            "verb": "Accepted invitation to cluster" if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED else "rejected invitation to cluster",
+            "actor": invitation_record.user,
+            "target": invitation_record.cluster,
+            "metadata": None
+        }
+        notifier = Notifier(
+                event=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED else notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
+                data=notification_data,
+        )
+        notifier.send_notification()
+
+        return super().patch(request, *args, **kwargs)

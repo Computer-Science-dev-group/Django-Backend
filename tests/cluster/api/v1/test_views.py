@@ -1,5 +1,6 @@
 import uuid
 from datetime import timedelta
+from unittest.mock import patch
 from urllib.parse import urlencode
 
 from django.test import override_settings
@@ -15,6 +16,7 @@ from tests.cluster.test_models import (
     InternalClusterFactory,
 )
 from uia_backend.accounts.api.v1.serializers import ProfileSerializer
+from uia_backend.cluster.api.v1.serializers import ClusterInvitationSerializer
 from uia_backend.cluster.constants import (
     ADD_CLUSTER_MEMBER_PERMISSION,
     REMOVE_CLUSTER_MEMBER_PERMISSION,
@@ -28,6 +30,7 @@ from uia_backend.libs.permissions import (
     unassign_object_permissions,
 )
 from uia_backend.libs.testutils import get_test_image_file
+from uia_backend.notification import constants as notification_constants
 
 
 class ClusterListCreateAPIViewTests(APITestCase):
@@ -850,7 +853,10 @@ class ClusterInvitationListAPIViewTests(APITestCase):
 
         request_data = {"status": 0, "duration": 5, "user": str(user_to_invite.id)}
 
-        response = self.client.post(path=url, data=request_data)
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.post(path=url, data=request_data)
 
         invitation_record = ClusterInvitation.objects.first()
 
@@ -875,6 +881,27 @@ class ClusterInvitationListAPIViewTests(APITestCase):
         self.assertEqual(invitation_record.user, user_to_invite)
         self.assertEqual(invitation_record.created_by, self.user)
         self.assertEqual(invitation_record.cluster, self.cluster)
+
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[invitation_record.user.id],
+            verb="invited you to a cluster",
+            actor_dict={
+                "id": str(invitation_record.created_by.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(invitation_record.cluster.id),
+                "app_label": "cluster",
+                "model_name": "cluster",
+            },
+            notification_type=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
+            data=dict(
+                ClusterInvitationSerializer().to_representation(
+                    instance=invitation_record
+                )
+            ),
+        )
 
     def test_create_cluster_invitation__case_2(self):
         """Test create cluster invitation when user does not have add cluster memeber permission."""
@@ -1061,9 +1088,27 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
                 "user": str(user_to_invite.id),
             },
         }
-
-        response = self.client.patch(path=url, data=request_data)
-
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.patch(path=url, data=request_data)
+            
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[invitation_record.user.id],
+            verb="Cancelled your invitation to cluster",
+            actor_dict={
+                "id": str(invitation_record.created_by.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(invitation_record.cluster.id),
+                "app_label": "cluster",
+                "model_name": "cluster",
+            },
+            notification_type=notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION,
+            data=None
+        )      
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
 
@@ -1104,8 +1149,12 @@ class ClusterInvitationDetailAPIViewTests(APITestCase):
                 "user": str(user_to_invite.id),
             },
         }
-
-        response = self.client.patch(path=url, data=request_data)
+        
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) :
+            response = self.client.patch(path=url, data=request_data)
+            
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
@@ -1227,8 +1276,29 @@ class UserClusterInvitationDetailAPIView(APITestCase):
             },
         }
 
-        response = self.client.patch(path=self.url, data=request_data)
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.patch(path=self.url, data=request_data)
+            
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[self.invitation_record.created_by.id],
+            verb="Accepted invitation to cluster",
+            actor_dict={
+                "id": str(self.invitation_record.user.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(self.invitation_record.cluster.id),
+                "app_label": "cluster",
+                "model_name": "cluster",
+            },
+            notification_type=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION,
+            data=None
+        )
 
+        
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
 
@@ -1254,11 +1324,32 @@ class UserClusterInvitationDetailAPIView(APITestCase):
                 "user": str(self.user.id),
             },
         }
-
-        response = self.client.patch(path=self.url, data=request_data)
+        
+        with patch(
+            "uia_backend.notification.tasks.send_in_app_notification_task.delay"
+        ) as mock_send_in_app_notification:
+            response = self.client.patch(path=self.url, data=request_data)
+             
+        mock_send_in_app_notification.assert_called_once_with(
+            recipients=[self.invitation_record.created_by.id],
+            verb="rejected invitation to cluster",
+            actor_dict={
+                "id": str(self.invitation_record.user.id),
+                "app_label": "accounts",
+                "model_name": "customuser",
+            },
+            target_dict={
+                "id": str(self.invitation_record.cluster.id),
+                "app_label": "cluster",
+                "model_name": "cluster",
+            },
+            notification_type=notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
+            data=None
+        )
 
         self.assertEqual(response.status_code, 200)
         self.assertDictEqual(response.json(), expected_data)
+
 
         self.invitation_record.refresh_from_db()
         self.assertEqual(
