@@ -258,28 +258,44 @@ class UserClusterInvitationDetailAPIView(generics.RetrieveUpdateAPIView):
         return get_object_or_404(
             self.request.user.cluster_invitations, id=self.kwargs["invitation_id"]
         )
+    
 
-    def patch(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        invitation_record = ClusterInvitation.objects.get(
-            id=self.kwargs["invitation_id"]
-        )
-        status = self.request.data["status"]
+    def perform_update(self, serializer:ClusterInvitationSerializer) -> None:
+        invitation_record = serializer.save()
+        
+        if invitation_record.status == ClusterInvitation.INVITATION_STATUS_ACCEPTED:
+            recipient = invitation_record.created_by
+            actor = invitation_record.user
+            verb = 'invitation accepted' 
+            event = notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION
 
-        notification_data = {
-            "recipients": [invitation_record.created_by],
-            "verb": "Accepted invitation to cluster"
-            if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED
-            else "rejected invitation to cluster",
-            "actor": invitation_record.user,
-            "target": invitation_record.cluster,
-            "metadata": None,
-        }
-        notifier = Notifier(
-            event=notification_constants.NOTIFICATION_TYPE_ACCEPT_CLUSTER_INVITATION
-            if status == ClusterInvitation.INVITATION_STATUS_ACCEPTED
-            else notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION,
-            data=notification_data,
-        )
-        notifier.send_notification()
+            notification_data = {
+                'recipients': [recipient],
+                'verb': verb,
+                'actor': actor,
+                'target': invitation_record.cluster,
+                'metadata': dict(serializer.to_representation(instance=invitation_record))
+            }
 
-        return super().patch(request, *args, **kwargs)
+            notifier = Notifier(
+                    event=event,
+                    data = notification_data
+                )
+            notifier.send_notification()
+
+
+        # elif invitation_record.status == ClusterInvitation.INVITATION_STATUS_REJECTED:
+        #     recipient = invitation_record.created_by
+        #     actor = invitation_record.user
+        #     verb = 'invitation rejected'
+        #     event = notification_constants.NOTIFICATION_TYPE_REJECT_CLUSTER_INVITATION 
+            
+            
+        # elif invitation_record.status == ClusterInvitation.INVITATION_STATUS_CANCLED:
+        #     recipient = invitation_record.user
+        #     actor = invitation_record.created_by
+        #     verb = 'invitation canceled'
+        #     event = notification_constants.NOTIFICATION_TYPE_CANCELED_CLUSTER_INVITATION
+
+
+       
